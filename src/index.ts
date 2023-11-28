@@ -33,7 +33,7 @@ export const tmdbKey = process.env.TMDB_KEY && process.env.TMDB_KEY;
 
     try {
         fastify.get("/", (_, rp) => {
-            rp.status(200).send("Welcome to FlixQuest API! 🎉");
+            rp.status(200).send("Welcome to Caffeine API! 🎉");
         });
         fastify.get("*", (request, reply) => {
             reply.status(404).send({
