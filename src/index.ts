@@ -1,9 +1,14 @@
 import Fastify from "fastify";
-import superstream from "./routes/superstream";
+import showbox from "./routes/showbox";
 import flixhq from "./routes/flixhq";
+import zoe from "./routes/zoe";
+import remotestream from "./routes/remotestream";
+import smashystream from "./routes/smashystream";
+import gomovies from "./routes/gomovies";
 import chalk from "chalk";
 import FastifyCors from "@fastify/cors";
 import dotenv from "dotenv";
+import { providers } from "./models/functions";
 dotenv.config();
 
 export const workers_url = process.env.WORKERS_URL && process.env.WORKERS_URL;
@@ -28,11 +33,16 @@ export const tmdbKey = process.env.TMDB_KEY && process.env.TMDB_KEY;
         methods: "GET",
     });
 
-    await fastify.register(superstream, { prefix: "/superstream" });
+    await fastify.register(showbox, { prefix: "/superstream" });
+    await fastify.register(showbox, { prefix: "/showbox" });
     await fastify.register(flixhq, { prefix: "/flixhq" });
+    await fastify.register(zoe, { prefix: "/zoe" });
+    await fastify.register(remotestream, { prefix: "/remotestream" });
+    await fastify.register(smashystream, { prefix: "/smashystream" });
+    await fastify.register(gomovies, { prefix: "/gomovies" });
 
     try {
-        fastify.get("/", (_, rp) => {
+        fastify.get("/", async (_, rp) => {
             rp.status(200).send("Welcome to Caffeine API! 🎉");
         });
         fastify.get("*", (request, reply) => {

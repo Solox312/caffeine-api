@@ -8,6 +8,7 @@ import axios, { AxiosError } from "axios";
 import { workers_url } from "..";
 import dotenv from "dotenv";
 import { tmdbBaseUrl, tmdbKey } from "../constants/api_constants";
+import { supportedLanguages } from "./types";
 dotenv.config();
 
 const proxyUrl = process.env.WORKERS_URL;
@@ -57,6 +58,7 @@ export async function fetchTVData(
     episodeId: number;
     seasonId: number;
     year: number;
+    numberOfSeasons: number;
 } | null> {
     try {
         const apiUrlSeason = `${tmdbBaseUrl}/3/tv/${id}/season/${seasonNum}?language=en-US&api_key=${tmdbKey}`;
@@ -71,15 +73,26 @@ export async function fetchTVData(
         const year = parseInt(
             resposneGeneral.data.first_air_date.split("-")[0],
         );
+        const numberOfSeasons = resposneGeneral.data.number_of_seasons;
         const episodeIndex = parseInt(episodeNum) - 1;
 
         if (episodeIndex >= 0 && episodeIndex < episodes.length) {
             const { id: episodeId } = episodes[episodeIndex];
-            return { title, episodeId, seasonId, year };
+            return { title, episodeId, seasonId, year, numberOfSeasons };
         } else {
             throw new Error("Invalid episode number");
         }
     } catch (error) {
         throw new Error("Error fetching TMDB data:," + error);
     }
+}
+
+export function langConverter(short: string) {
+    for (let i = 0; i < supportedLanguages.length; i++) {
+        if (short === supportedLanguages[i].shortCode) {
+            return supportedLanguages[i].longName;
+        }
+    }
+
+    return short;
 }

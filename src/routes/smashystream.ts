@@ -1,10 +1,5 @@
 import { MovieMedia, ShowMedia } from "@movie-web/providers";
-import {
-    FastifyRequest,
-    FastifyReply,
-    FastifyInstance,
-    RegisterOptions,
-} from "fastify";
+import { FastifyRequest, FastifyReply, FastifyInstance } from "fastify";
 import {
     fetchM3U8Content,
     fetchMovieData,
@@ -17,7 +12,7 @@ import { ResolutionStream, SubData } from "../models/types";
 const routes = async (fastify: FastifyInstance) => {
     fastify.get("/", (_, rp) => {
         rp.status(200).send({
-            intro: "Welcome to the flixhq provider",
+            intro: "Welcome to the smashystream provider",
             routes: "/watch-movie " + "/watch-tv",
         });
     });
@@ -50,36 +45,37 @@ const routes = async (fastify: FastifyInstance) => {
                 tmdbId: tmdbId,
             };
 
-            let flixhqSources: ResolutionStream[] = [];
-            let flixhqSubs: SubData[] = [];
+            let smashystreamSources: ResolutionStream[] = [];
+            let smashystreamSubs: SubData[] = [];
 
             try {
-                const outputFlixhqEmbed = await providers.runSourceScraper({
-                    media: media,
-                    id: "flixhq",
+                const outputsmashystreamEmbed =
+                    await providers.runSourceScraper({
+                        media: media,
+                        id: "smashystream",
+                    });
+
+                const outputsmashystream = await providers.runEmbedScraper({
+                    id: outputsmashystreamEmbed.embeds[0].embedId,
+                    url: outputsmashystreamEmbed.embeds[0].url,
                 });
 
-                const outputFlixhq = await providers.runEmbedScraper({
-                    id: outputFlixhqEmbed.embeds[0].embedId,
-                    url: outputFlixhqEmbed.embeds[0].url,
-                });
-
-                if (outputFlixhq?.stream?.type === "hls") {
+                if (outputsmashystream?.stream?.type === "hls") {
                     for (
                         let i = 0;
-                        i < outputFlixhq.stream.captions.length;
+                        i < outputsmashystream.stream.captions.length;
                         i++
                     ) {
-                        flixhqSubs.push({
+                        smashystreamSubs.push({
                             lang: langConverter(
-                                outputFlixhq.stream.captions[i].language,
+                                outputsmashystream.stream.captions[i].language,
                             ),
-                            url: outputFlixhq.stream.captions[i].url,
+                            url: outputsmashystream.stream.captions[i].url,
                         });
                     }
-                    flixhqSources.push({
+                    smashystreamSources.push({
                         quality: "auto",
-                        url: outputFlixhq?.stream.playlist,
+                        url: outputsmashystream?.stream.playlist,
                         isM3U8: true,
                     });
                     async function parseM3U8ContentFromUrl(url: string) {
@@ -97,7 +93,7 @@ const routes = async (fastify: FastifyInstance) => {
                                 const resolution = match[1];
                                 const url = match[2];
                                 matches.push({ resolution, url });
-                                flixhqSources.push({
+                                smashystreamSources.push({
                                     quality: resolution,
                                     url: url,
                                     isM3U8: true,
@@ -112,16 +108,15 @@ const routes = async (fastify: FastifyInstance) => {
                         }
                     }
 
-                    const m3u8Url = outputFlixhq.stream.playlist;
+                    const m3u8Url = outputsmashystream.stream.playlist;
                     await parseM3U8ContentFromUrl(m3u8Url);
                 }
 
                 reply.status(200).send({
-                    sources: flixhqSources,
-                    subtitles: flixhqSubs,
+                    sources: smashystreamSources,
+                    subtitles: smashystreamSubs,
                 });
             } catch (err) {
-                console.log(err);
                 reply.status(500).send({
                     message: "Something went wrong. Please try again later.",
                     error: err,
@@ -182,36 +177,37 @@ const routes = async (fastify: FastifyInstance) => {
                 numberOfSeasons: parseInt(numberOfSeasons),
             };
 
-            let flixhqSources: ResolutionStream[] = [];
-            let flixhqSubs: SubData[] = [];
+            let smashystreamSources: ResolutionStream[] = [];
+            let smashystreamSubs: SubData[] = [];
 
             try {
-                const outputFlixhqEmbed = await providers.runSourceScraper({
-                    media: media,
-                    id: "flixhq",
+                const outputsmashystreamEmbed =
+                    await providers.runSourceScraper({
+                        media: media,
+                        id: "smashystream",
+                    });
+
+                const outputsmashystream = await providers.runEmbedScraper({
+                    id: outputsmashystreamEmbed.embeds[0].embedId,
+                    url: outputsmashystreamEmbed.embeds[0].url,
                 });
 
-                const outputFlixhq = await providers.runEmbedScraper({
-                    id: outputFlixhqEmbed.embeds[0].embedId,
-                    url: outputFlixhqEmbed.embeds[0].url,
-                });
-
-                if (outputFlixhq?.stream?.type === "hls") {
+                if (outputsmashystream?.stream?.type === "hls") {
                     for (
                         let i = 0;
-                        i < outputFlixhq.stream.captions.length;
+                        i < outputsmashystream.stream.captions.length;
                         i++
                     ) {
-                        flixhqSubs.push({
+                        smashystreamSubs.push({
                             lang: langConverter(
-                                outputFlixhq.stream.captions[i].language,
+                                outputsmashystream.stream.captions[i].language,
                             ),
-                            url: outputFlixhq.stream.captions[i].url,
+                            url: outputsmashystream.stream.captions[i].url,
                         });
                     }
-                    flixhqSources.push({
+                    smashystreamSources.push({
                         quality: "auto",
-                        url: outputFlixhq?.stream.playlist,
+                        url: outputsmashystream?.stream.playlist,
                         isM3U8: true,
                     });
                     async function parseM3U8ContentFromUrl(url: string) {
@@ -229,7 +225,7 @@ const routes = async (fastify: FastifyInstance) => {
                                 const resolution = match[1];
                                 const url = match[2];
                                 matches.push({ resolution, url });
-                                flixhqSources.push({
+                                smashystreamSources.push({
                                     quality: resolution,
                                     url: url,
                                     isM3U8: true,
@@ -244,13 +240,13 @@ const routes = async (fastify: FastifyInstance) => {
                         }
                     }
 
-                    const m3u8Url = outputFlixhq.stream.playlist;
+                    const m3u8Url = outputsmashystream.stream.playlist;
                     await parseM3U8ContentFromUrl(m3u8Url);
                 }
 
                 reply.status(200).send({
-                    sources: flixhqSources,
-                    subtitles: flixhqSubs,
+                    sources: smashystreamSources,
+                    subtitles: smashystreamSubs,
                 });
             } catch (err) {
                 reply.status(500).send({
