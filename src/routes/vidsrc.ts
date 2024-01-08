@@ -13,7 +13,7 @@ import { ResolutionStream, SubData } from "../models/types";
 const routes = async (fastify: FastifyInstance) => {
     fastify.get("/", (_, rp) => {
         rp.status(200).send({
-            intro: "Welcome to the remotestream provider",
+            intro: "Welcome to the vidsrc provider",
             routes: "/watch-movie " + "/watch-tv",
         });
     });
@@ -46,45 +46,43 @@ const routes = async (fastify: FastifyInstance) => {
                 tmdbId: tmdbId,
             };
 
-            let remotestreamSources: ResolutionStream[] = [];
-            let remotestreamSubs: SubData[] = [];
+            let vidsrcSources: ResolutionStream[] = [];
+            let vidsrcSubs: SubData[] = [];
 
             try {
-                const outputremotestreamEmbed =
-                    await providers.runSourceScraper({
-                        media: media,
-                        id: "remotestream",
-                    });
-
-                const outputremotestream = await providers.runEmbedScraper({
-                    id: outputremotestreamEmbed.embeds[0].embedId,
-                    url: outputremotestreamEmbed.embeds[0].url,
+                const outputvidsrcEmbed = await providers.runSourceScraper({
+                    media: media,
+                    id: "vidsrc",
                 });
 
-                if (outputremotestream?.stream[0].type === "hls") {
+                const outputvidsrc = await providers.runEmbedScraper({
+                    id: outputvidsrcEmbed.embeds[0].embedId,
+                    url: outputvidsrcEmbed.embeds[0].url,
+                });
+
+                if (outputvidsrc?.stream[0].type === "hls") {
                     for (
                         let i = 0;
-                        i < outputremotestream.stream[0].captions.length;
+                        i < outputvidsrc.stream[0].captions.length;
                         i++
                     ) {
-                        remotestreamSubs.push({
+                        vidsrcSubs.push({
                             lang: langConverter(
-                                outputremotestream.stream[0].captions[i]
-                                    .language,
+                                outputvidsrc.stream[0].captions[i].language,
                             ),
-                            url: outputremotestream.stream[0].captions[i].url,
+                            url: outputvidsrc.stream[0].captions[i].url,
                         });
                     }
-                    remotestreamSources.push({
+                    vidsrcSources.push({
                         quality: "auto",
-                        url: outputremotestream?.stream[0].playlist,
+                        url: outputvidsrc?.stream[0].playlist,
                         isM3U8: true,
                     });
 
-                    const m3u8Url = outputremotestream.stream[0].playlist;
+                    const m3u8Url = outputvidsrc.stream[0].playlist;
                     await parseM3U8ContentFromUrl(m3u8Url, reply).then((v) => {
                         v?.forEach((r) => {
-                            remotestreamSources.push({
+                            vidsrcSources.push({
                                 quality: r.resolution,
                                 url: r.url,
                                 isM3U8: r.isM3U8,
@@ -94,10 +92,11 @@ const routes = async (fastify: FastifyInstance) => {
                 }
 
                 reply.status(200).send({
-                    sources: remotestreamSources,
-                    subtitles: remotestreamSubs,
+                    sources: vidsrcSources,
+                    subtitles: vidsrcSubs,
                 });
             } catch (err) {
+                console.log(err);
                 reply.status(500).send({
                     message: "Something went wrong. Please try again later.",
                     error: err,
@@ -158,45 +157,43 @@ const routes = async (fastify: FastifyInstance) => {
                 numberOfSeasons: parseInt(numberOfSeasons),
             };
 
-            let remotestreamSources: ResolutionStream[] = [];
-            let remotestreamSubs: SubData[] = [];
+            let vidsrcSources: ResolutionStream[] = [];
+            let vidsrcSubs: SubData[] = [];
 
             try {
-                const outputremotestreamEmbed =
-                    await providers.runSourceScraper({
-                        media: media,
-                        id: "remotestream",
-                    });
-
-                const outputremotestream = await providers.runEmbedScraper({
-                    id: outputremotestreamEmbed.embeds[0].embedId,
-                    url: outputremotestreamEmbed.embeds[0].url,
+                const outputvidsrcEmbed = await providers.runSourceScraper({
+                    media: media,
+                    id: "vidsrc",
                 });
 
-                if (outputremotestream?.stream[0].type === "hls") {
+                const outputvidsrc = await providers.runEmbedScraper({
+                    id: outputvidsrcEmbed.embeds[0].embedId,
+                    url: outputvidsrcEmbed.embeds[0].url,
+                });
+
+                if (outputvidsrc?.stream[0].type === "hls") {
                     for (
                         let i = 0;
-                        i < outputremotestream.stream[0].captions.length;
+                        i < outputvidsrc.stream[0].captions.length;
                         i++
                     ) {
-                        remotestreamSubs.push({
+                        vidsrcSubs.push({
                             lang: langConverter(
-                                outputremotestream.stream[0].captions[i]
-                                    .language,
+                                outputvidsrc.stream[0].captions[i].language,
                             ),
-                            url: outputremotestream.stream[0].captions[i].url,
+                            url: outputvidsrc.stream[0].captions[i].url,
                         });
                     }
-                    remotestreamSources.push({
+                    vidsrcSources.push({
                         quality: "auto",
-                        url: outputremotestream?.stream[0].playlist,
+                        url: outputvidsrc?.stream[0].playlist,
                         isM3U8: true,
                     });
 
-                    const m3u8Url = outputremotestream.stream[0].playlist;
+                    const m3u8Url = outputvidsrc.stream[0].playlist;
                     await parseM3U8ContentFromUrl(m3u8Url, reply).then((v) => {
                         v?.forEach((r) => {
-                            remotestreamSources.push({
+                            vidsrcSources.push({
                                 quality: r.resolution,
                                 url: r.url,
                                 isM3U8: r.isM3U8,
@@ -206,10 +203,11 @@ const routes = async (fastify: FastifyInstance) => {
                 }
 
                 reply.status(200).send({
-                    sources: remotestreamSources,
-                    subtitles: remotestreamSubs,
+                    sources: vidsrcSources,
+                    subtitles: vidsrcSubs,
                 });
             } catch (err) {
+                console.log(err);
                 reply.status(500).send({
                     message: "Something went wrong. Please try again later.",
                     error: err,

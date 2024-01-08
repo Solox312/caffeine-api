@@ -5,6 +5,7 @@ import zoe from "./routes/zoe";
 import remotestream from "./routes/remotestream";
 import smashystream from "./routes/smashystream";
 import gomovies from "./routes/gomovies";
+import vidsrc from "./routes/vidsrc";
 import chalk from "chalk";
 import FastifyCors from "@fastify/cors";
 import dotenv from "dotenv";
@@ -40,10 +41,16 @@ export const tmdbKey = process.env.TMDB_KEY && process.env.TMDB_KEY;
     await fastify.register(remotestream, { prefix: "/remotestream" });
     await fastify.register(smashystream, { prefix: "/smashystream" });
     await fastify.register(gomovies, { prefix: "/gomovies" });
+    await fastify.register(vidsrc, { prefix: "/vidsrc" });
 
     try {
         fastify.get("/", async (_, rp) => {
-            rp.status(200).send("Welcome to Caffeine API! 🎉");
+            console.log(
+                providers.listSources().forEach((e) => {
+                    console.log(e.id);
+                }),
+            );
+            rp.status(200).send("Welcome to Caffeiene API! 🎉");
         });
         fastify.get("*", (request, reply) => {
             reply.status(404).send({

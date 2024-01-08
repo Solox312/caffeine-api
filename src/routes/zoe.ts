@@ -5,6 +5,7 @@ import {
     fetchMovieData,
     fetchTVData,
     langConverter,
+    parseM3U8ContentFromUrl,
     providers,
 } from "../models/functions";
 import { ResolutionStream, SubData } from "../models/types";
@@ -59,52 +60,35 @@ const routes = async (fastify: FastifyInstance) => {
                     url: outputzoeEmbed.embeds[0].url,
                 });
 
-                if (outputzoe?.stream?.type === "hls") {
-                    for (let i = 0; i < outputzoe.stream.captions.length; i++) {
+                if (outputzoe?.stream[0].type === "hls") {
+                    for (
+                        let i = 0;
+                        i < outputzoe.stream[0].captions.length;
+                        i++
+                    ) {
                         zoeSubs.push({
                             lang: langConverter(
-                                outputzoe.stream.captions[i].language,
+                                outputzoe.stream[0].captions[i].language,
                             ),
-                            url: outputzoe.stream.captions[i].url,
+                            url: outputzoe.stream[0].captions[i].url,
                         });
                     }
                     zoeSources.push({
                         quality: "auto",
-                        url: outputzoe?.stream.playlist,
+                        url: outputzoe?.stream[0].playlist,
                         isM3U8: true,
                     });
-                    async function parseM3U8ContentFromUrl(url: string) {
-                        try {
-                            const m3u8Content = await fetchM3U8Content(url);
-                            const regex =
-                                /RESOLUTION=\d+x(\d+)[\s\S]*?(https:\/\/[^\s]+)/g;
-                            const matches: {
-                                resolution: string;
-                                url: string;
-                            }[] = [];
-                            let match;
 
-                            while ((match = regex.exec(m3u8Content)) !== null) {
-                                const resolution = match[1];
-                                const url = match[2];
-                                matches.push({ resolution, url });
-                                zoeSources.push({
-                                    quality: resolution,
-                                    url: url,
-                                    isM3U8: true,
-                                });
-                            }
-                        } catch (error) {
-                            reply.status(500).send({
-                                message:
-                                    "Something went wrong. Please try again later.",
-                                error: error,
+                    const m3u8Url = outputzoe.stream[0].playlist;
+                    await parseM3U8ContentFromUrl(m3u8Url, reply).then((v) => {
+                        v?.forEach((r) => {
+                            zoeSources.push({
+                                quality: r.resolution,
+                                url: r.url,
+                                isM3U8: r.isM3U8,
                             });
-                        }
-                    }
-
-                    const m3u8Url = outputzoe.stream.playlist;
-                    await parseM3U8ContentFromUrl(m3u8Url);
+                        });
+                    });
                 }
 
                 reply.status(200).send({
@@ -186,52 +170,35 @@ const routes = async (fastify: FastifyInstance) => {
                     url: outputzoeEmbed.embeds[0].url,
                 });
 
-                if (outputzoe?.stream?.type === "hls") {
-                    for (let i = 0; i < outputzoe.stream.captions.length; i++) {
+                if (outputzoe?.stream[0].type === "hls") {
+                    for (
+                        let i = 0;
+                        i < outputzoe.stream[0].captions.length;
+                        i++
+                    ) {
                         zoeSubs.push({
                             lang: langConverter(
-                                outputzoe.stream.captions[i].language,
+                                outputzoe.stream[0].captions[i].language,
                             ),
-                            url: outputzoe.stream.captions[i].url,
+                            url: outputzoe.stream[0].captions[i].url,
                         });
                     }
                     zoeSources.push({
                         quality: "auto",
-                        url: outputzoe?.stream.playlist,
+                        url: outputzoe?.stream[0].playlist,
                         isM3U8: true,
                     });
-                    async function parseM3U8ContentFromUrl(url: string) {
-                        try {
-                            const m3u8Content = await fetchM3U8Content(url);
-                            const regex =
-                                /RESOLUTION=\d+x(\d+)[\s\S]*?(https:\/\/[^\s]+)/g;
-                            const matches: {
-                                resolution: string;
-                                url: string;
-                            }[] = [];
-                            let match;
 
-                            while ((match = regex.exec(m3u8Content)) !== null) {
-                                const resolution = match[1];
-                                const url = match[2];
-                                matches.push({ resolution, url });
-                                zoeSources.push({
-                                    quality: resolution,
-                                    url: url,
-                                    isM3U8: true,
-                                });
-                            }
-                        } catch (error) {
-                            reply.status(500).send({
-                                message:
-                                    "Something went wrong. Please try again later.",
-                                error: error,
+                    const m3u8Url = outputzoe.stream[0].playlist;
+                    await parseM3U8ContentFromUrl(m3u8Url, reply).then((v) => {
+                        v?.forEach((r) => {
+                            zoeSources.push({
+                                quality: r.resolution,
+                                url: r.url,
+                                isM3U8: r.isM3U8,
                             });
-                        }
-                    }
-
-                    const m3u8Url = outputzoe.stream.playlist;
-                    await parseM3U8ContentFromUrl(m3u8Url);
+                        });
+                    });
                 }
 
                 reply.status(200).send({
