@@ -1,7 +1,7 @@
 FROM node:19 as builder
 
 LABEL version="1.0.0"
-LABEL description="Caffeine API (fastify) Docker Image"
+LABEL description="FlixQuest API (fastify) Docker Image"
 
 WORKDIR /app
 

@@ -1,7 +1,7 @@
 FROM node:19.1-alpine as builder
 
 LABEL version="1.0.0"
-LABEL description="Caffeiene API (fastify) Docker Image"
+LABEL description="FlixQuest API (fastify) Docker Image"
 
 # update packages, to reduce risk of vulnerabilities
 RUN apk update && apk upgrade

@@ -9,21 +9,36 @@ import vidsrc from "./routes/vidsrc";
 import chalk from "chalk";
 import FastifyCors from "@fastify/cors";
 import dotenv from "dotenv";
-import { providers } from "./models/functions";
+import Redis from "ioredis";
 dotenv.config();
 
 export const workers_url = process.env.WORKERS_URL && process.env.WORKERS_URL;
 export const tmdbKey = process.env.TMDB_KEY && process.env.TMDB_KEY;
+
+export const redis =
+    process.env.REDIS_HOST &&
+    new Redis({
+        host: process.env.REDIS_HOST,
+        port: Number(process.env.REDIS_PORT),
+        password: process.env.REDIS_PASSWORD,
+    });
 
 (async () => {
     const PORT = Number(process.env.PORT) || 3000;
 
     console.log(chalk.green(`Starting server on port ${PORT}... 🚀`));
     if (!process.env.WORKERS_URL)
-        console.warn(chalk.yellowBright("Workers url not found"));
+        console.warn(
+            chalk.yellowBright(
+                "Workers (proxy) url not found use `proxied=false` argument in link fetching",
+            ),
+        );
 
     if (!process.env.TMDB_KEY)
         console.warn(chalk.yellowBright("TMDB key not found"));
+
+    if (!process.env.REDIS_HOST)
+        console.warn(chalk.yellowBright("Redis not found. Cache disabled."));
 
     const fastify = Fastify({
         maxParamLength: 1000,
@@ -45,12 +60,7 @@ export const tmdbKey = process.env.TMDB_KEY && process.env.TMDB_KEY;
 
     try {
         fastify.get("/", async (_, rp) => {
-            console.log(
-                providers.listSources().forEach((e) => {
-                    console.log(e.id);
-                }),
-            );
-            rp.status(200).send("Welcome to Caffeiene API! 🎉");
+            rp.status(200).send("Welcome to FlixQuest API! 🎉");
         });
         fastify.get("*", (request, reply) => {
             reply.status(404).send({
