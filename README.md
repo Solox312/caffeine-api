@@ -1,5 +1,5 @@
 <p align="center">
-    <img alt="Consumet" src="https://github.com/Webcap/webcap.github.io/blob/trunk/caffiene/res/assets/images/logo.png?raw=true" width="150">
+    <img alt="Consumet" src="https://github.com/Webcap/webcap.github.io/blob/trunk/caffiene/res/assets/images/logo.png?raw=true" width="200">
 </p>
 <h1 align="center">caffeine API</h1>
 
