@@ -60,7 +60,7 @@ export const redis =
 
     try {
         fastify.get("/", async (_, rp) => {
-            rp.status(200).send("Welcome to FlixQuest API! 🎉");
+            rp.status(200).send("Welcome to caffeine API! 🎉");
         });
         fastify.get("*", (request, reply) => {
             reply.status(404).send({

@@ -1,15 +1,15 @@
 <p align="center">
     <img alt="Consumet" src="https://raw.githubusercontent.com/BeamlakAschalew/beamlakaschalew.github.io/main/cinemax/res/assets/images/logo.png" width="150">
 </p>
-<h1 align="center">FlixQuest API</h1>
+<h1 align="center">caffeine API</h1>
 
 <p align="center">REST API that fetches streaming links of movies and TV shows based on TMDB id using @movie-web/providers package</p>
 
-<p align="center"><a src="https://github.com/BeamlakAschalew/flixquest-api/actions/workflows/node.js.yml"><img src="https://github.com/BeamlakAschalew/flixquest-api/actions/workflows/node.js.yml/badge.svg" alt="Node build badge"></a>
-<a src="https://github.com/BeamlakAschalew/flixquest-api/blob/main/LICENSE"><img src="https://img.shields.io/github/license/BeamlakAschalew/flixquest-api"></img></a>
+<p align="center"><a src="https://github.com/BeamlakAschalew/caffeine-api/actions/workflows/node.js.yml"><img src="https://github.com/BeamlakAschalew/caffeine-api/actions/workflows/node.js.yml/badge.svg" alt="Node build badge"></a>
+<a src="https://github.com/BeamlakAschalew/caffeine-api/blob/main/LICENSE"><img src="https://img.shields.io/github/license/BeamlakAschalew/caffeine-api"></img></a>
 </p>
 
-Hosted instance: https://flixquest-api.vercel.app
+Hosted instance: https://caffeine-api.vercel.app
 
 ## API Reference
 
@@ -74,8 +74,8 @@ Installation is simple.
 Run the following command to clone the repository, and install the dependencies.
 
 ```sh
-$ git clone https://github.com/BeamlakAschalew/flixquest-api.git
-$ cd flixquest-api
+$ git clone https://github.com/BeamlakAschalew/caffeine-api.git
+$ cd caffeine-api
 $ npm install
 ```
 
@@ -92,15 +92,15 @@ $ nodemon
 
 ### Vercel
 
-Host your own instance of FlixQuest API on Vercel using the button below.
+Host your own instance of caffeine API on Vercel using the button below.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%BeamlakAschalew%2Fflixquest-api)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%BeamlakAschalew%2Fcaffeine-api)
 
 ### Render
 
-Host your own instance of FlixQuest API on Render using the button below.
+Host your own instance of caffeine API on Render using the button below.
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/BeamlakAschalew/flixquest-api)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/BeamlakAschalew/caffeine-api)
 
 ## Environment Variables
 
@@ -122,8 +122,8 @@ You can cache data that comes from TMDB and from the providers if you have a [Re
 Most of the code of this script is based on [Consumet API](https://github.com/consumet/api.consumet.org/)<br>
 The script uses [@movie-web/providers](https://www.npmjs.com/package/@movie-web/providers) package
 ## Contributors
-<a href="https://github.com/beamlakaschalew/flixquest-api/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=beamlakaschalew/flixquest-api" />
+<a href="https://github.com/beamlakaschalew/caffeine-api/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=beamlakaschalew/caffeine-api" />
 </a>
 
 
