@@ -72,7 +72,7 @@ Installation is simple.
 Run the following command to clone the repository, and install the dependencies.
 
 ```sh
-$ git clone https://github.com/BeamlakAschalew/caffeine-api.git
+$ git clone https://github.com/Solox312/caffeine-api.git
 $ cd caffeine-api
 $ npm install
 ```
