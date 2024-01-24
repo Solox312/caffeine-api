@@ -5,8 +5,6 @@
 
 <p align="center">REST API that fetches streaming links of movies and TV shows based on TMDB id using @movie-web/providers package</p>
 
-<p align="center"><a src="https://github.com/BeamlakAschalew/caffeine-api/actions/workflows/node.js.yml"><img src="https://github.com/BeamlakAschalew/caffeine-api/actions/workflows/node.js.yml/badge.svg" alt="Node build badge"></a>
-<a src="https://github.com/BeamlakAschalew/caffeine-api/blob/main/LICENSE"><img src="https://img.shields.io/github/license/BeamlakAschalew/caffeine-api"></img></a>
 </p>
 
 Hosted instance: https://caffeine-api.vercel.app
