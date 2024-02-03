@@ -116,12 +116,3 @@ You can cache data that comes from TMDB and from the providers if you have a [Re
 `REDIS_PORT` port of your database connection
 
 
-## Credits
-Most of the code of this script is based on [Consumet API](https://github.com/consumet/api.consumet.org/)<br>
-The script uses [@movie-web/providers](https://www.npmjs.com/package/@movie-web/providers) package
-## Contributors
-<a href="https://github.com/beamlakaschalew/caffeine-api/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=beamlakaschalew/caffeine-api" />
-</a>
-
-
