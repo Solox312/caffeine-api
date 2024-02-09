@@ -1,11 +1,11 @@
 import {
     makeStandardFetcher,
     makeSimpleProxyFetcher,
-    targets,
     ShowMedia,
     MovieMedia,
     NotFoundError,
     buildProviders,
+    targets,
 } from "@movie-web/providers";
 import axios, { AxiosError } from "axios";
 import dotenv from "dotenv";
@@ -22,6 +22,7 @@ const providers = (useProxy: string, reply: FastifyReply) => {
         .setTarget(targets.ANY)
         .setFetcher(makeStandardFetcher(fetch))
         .addBuiltinProviders();
+
     if (useProxy === "true" || typeof useProxy === "undefined") {
         if (typeof proxyUrl === "undefined" || proxyUrl === "") {
             reply.status(500).send({
@@ -55,22 +56,52 @@ async function fetchM3U8Content(url: string): Promise<string> {
     }
 }
 
-async function parseM3U8ContentFromUrl(url: string, reply: FastifyReply) {
+function extractBaseUrl(url: string): string {
+    // Split the URL by '/'
+    const parts = url.split("/");
+    // Join the first few parts (up to the index where we want to extract)
+    const baseUrl = parts.slice(0, 6).join("/");
+    // Add trailing '/' if it's missing
+    return baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+}
+
+async function parseM3U8ContentFromUrl(
+    url: string,
+    reply: FastifyReply,
+    provider: string,
+) {
     try {
         const m3u8Content = await fetchM3U8Content(url);
-        const regex = /RESOLUTION=\d+x(\d+)[\s\S]*?(https:\/\/[^\s]+)/g;
         const matches: {
             resolution: string;
             url: string;
             isM3U8: boolean;
         }[] = [];
-        let match;
 
-        while ((match = regex.exec(m3u8Content)) !== null) {
-            const resolution = match[1];
-            const url = match[2];
-            const isM3U8 = true;
-            matches.push({ resolution, url, isM3U8 });
+        if (provider !== "vidsrcto") {
+            const regex = /RESOLUTION=\d+x(\d+)[\s\S]*?(https:\/\/[^\s]+)/g;
+
+            let match;
+
+            while ((match = regex.exec(m3u8Content)) !== null) {
+                const resolution = match[1];
+                const url = match[2];
+                const isM3U8 = true;
+
+                matches.push({ resolution, url, isM3U8 });
+            }
+        } else {
+            let vidsrctoBaseUrl = extractBaseUrl(url);
+
+            const regex =
+                /^#EXT-X-STREAM-INF:BANDWIDTH=\d+,(RESOLUTION=(\d+)x(\d+))\s*(.*)$/gm;
+            let match;
+            while ((match = regex.exec(m3u8Content)) !== null) {
+                const resolution = match[3];
+                const url = vidsrctoBaseUrl + match[4];
+                const isM3U8 = url.endsWith(".m3u8");
+                matches.push({ resolution, url, isM3U8 });
+            }
         }
 
         return matches;
@@ -199,11 +230,15 @@ export async function fetchHlsLinks(
     reply: FastifyReply,
     media: ShowMedia | MovieMedia,
     provider: string,
+    server: string,
 ) {
     let key = `${provider}`;
+    if (server === "undefined") {
+        server = "-";
+    }
     media.type === "show"
-        ? (key += `:show:${media.tmdbId}:${media.season.number}:${media.episode.number}`)
-        : (key += `:movie:${media.tmdbId}`);
+        ? (key += `:${server}:show:${media.tmdbId}:${media.season.number}:${media.episode.number}`)
+        : (key += `:${server}:movie:${media.tmdbId}`);
 
     const fetchLinks = async () => {
         let videoSources: ResolutionStream[] = [];
@@ -218,15 +253,16 @@ export async function fetchHlsLinks(
                 id: provider,
             });
 
-            outputEmbed.embeds.forEach((e) => {
-                console.log(e.embedId);
-            });
-
             let foundIndex = -1;
 
-            for (let i = 0; i < outputEmbed.embeds.length; i++) {
-                if (outputEmbed.embeds[i].embedId === "vidcloud") {
-                    foundIndex = i;
+            if (server !== "undefined") {
+                if (server !== "-") {
+                    for (let i = 0; i < outputEmbed.embeds.length; i++) {
+                        if (outputEmbed.embeds[i].embedId === server) {
+                            foundIndex = i;
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -257,15 +293,17 @@ export async function fetchHlsLinks(
                     isM3U8: true,
                 });
                 const m3u8Url = output.stream[0].playlist;
-                await parseM3U8ContentFromUrl(m3u8Url, reply).then((v) => {
-                    v?.forEach((r) => {
-                        videoSources.push({
-                            quality: r.resolution,
-                            url: r.url,
-                            isM3U8: r.isM3U8,
+                await parseM3U8ContentFromUrl(m3u8Url, reply, provider).then(
+                    (v) => {
+                        v?.forEach((r) => {
+                            videoSources.push({
+                                quality: r.resolution,
+                                url: r.url,
+                                isM3U8: r.isM3U8,
+                            });
                         });
-                    });
-                });
+                    },
+                );
             }
 
             const dataToCache = {

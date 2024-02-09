@@ -1,10 +1,12 @@
 <p align="center">
-    <img alt="Consumet" src="https://github.com/Webcap/webcap.github.io/blob/trunk/caffiene/res/assets/images/logo.png?raw=true" width="200">
+    <img alt="Consumet" src="https://raw.githubusercontent.com/BeamlakAschalew/beamlakaschalew.github.io/main/cinemax/res/assets/images/logo.png" width="150">
 </p>
 <h1 align="center">caffeine API</h1>
 
 <p align="center">REST API that fetches streaming links of movies and TV shows based on TMDB id using @movie-web/providers package</p>
 
+<p align="center"><a src="https://github.com/BeamlakAschalew/caffeine-api/actions/workflows/node.js.yml"><img src="https://github.com/BeamlakAschalew/caffeine-api/actions/workflows/node.js.yml/badge.svg" alt="Node build badge"></a>
+<a src="https://github.com/BeamlakAschalew/caffeine-api/blob/main/LICENSE"><img src="https://img.shields.io/github/license/BeamlakAschalew/caffeine-api"></img></a>
 </p>
 
 Hosted instance: https://caffeine-api.vercel.app
@@ -13,15 +15,16 @@ Hosted instance: https://caffeine-api.vercel.app
 
 #### List of available providers:
 
-| Name         | Id             | Status                               |
-| :----------- | :------------- | :----------------------------------- |
-| ShowBox      | `showbox`      | 🟢 200 <br>(without CloudFlare proxy) |
-| FlixHQ       | `flixhq`       | 🟢 200                                |
-| ZoeChip      | `zoe`          | 🟢 200                                |
-| SmashyStream | `smashystream` | 🟢 200                                |
-| RemoteStream | `remotestream` | 🔴 500                                |
-| Gomovies     | `gomovies`     | 🟢 200                                |
-| VidSrc       | `vidsrc`       | 🔴 500                                |
+| Name         | Id             | Status   |
+| :----------- | :------------- | :------- |
+| ShowBox      | `showbox`      | 🟢 200   |
+| FlixHQ       | `flixhq`       | 🟢 200   |
+| ZoeChip      | `zoe`          | 🟢 200   |
+| SmashyStream | `smashystream` | 🔴 500   |
+| RemoteStream | `remotestream` | 🔴 500   |
+| Gomovies     | `gomovies`     | 🟢 200   |
+| VidSrc       | `vidsrc`       | 🟢 200   |
+| VidSrcTo     | `vidsrcto`     | 🟢 200   |
 
 ### Get all links and subtitles for a movie
 
@@ -72,7 +75,7 @@ Installation is simple.
 Run the following command to clone the repository, and install the dependencies.
 
 ```sh
-$ git clone https://github.com/Solox312/caffeine-api.git
+$ git clone https://github.com/BeamlakAschalew/caffeine-api.git
 $ cd caffeine-api
 $ npm install
 ```
@@ -114,5 +117,14 @@ You can cache data that comes from TMDB and from the providers if you have a [Re
 `REDIS_HOST` URL of your Redis database<br>
 `REDIS_PASSWORD` password of your database<br>
 `REDIS_PORT` port of your database connection
+
+
+## Credits
+Most of the code of this script is based on [Consumet API](https://github.com/consumet/api.consumet.org/)<br>
+The script uses [@movie-web/providers](https://www.npmjs.com/package/@movie-web/providers) package
+## Contributors
+<a href="https://github.com/beamlakaschalew/caffeine-api/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=beamlakaschalew/caffeine-api" />
+</a>
 
 
