@@ -1,12 +1,10 @@
 <p align="center">
-    <img alt="Consumet" src="https://raw.githubusercontent.com/BeamlakAschalew/beamlakaschalew.github.io/main/cinemax/res/assets/images/logo.png" width="150">
+    <img alt="Consumet" src="https://github.com/Webcap/webcap.github.io/blob/trunk/caffiene/res/assets/images/logo.png?raw=true" width="200">
 </p>
 <h1 align="center">caffeine API</h1>
 
 <p align="center">REST API that fetches streaming links of movies and TV shows based on TMDB id using @movie-web/providers package</p>
 
-<p align="center"><a src="https://github.com/BeamlakAschalew/caffeine-api/actions/workflows/node.js.yml"><img src="https://github.com/BeamlakAschalew/caffeine-api/actions/workflows/node.js.yml/badge.svg" alt="Node build badge"></a>
-<a src="https://github.com/BeamlakAschalew/caffeine-api/blob/main/LICENSE"><img src="https://img.shields.io/github/license/BeamlakAschalew/caffeine-api"></img></a>
 </p>
 
 Hosted instance: https://caffeine-api.vercel.app
@@ -66,43 +64,6 @@ Get streaming link and subtitles for the TV show 'The Office' from the 'FlixHQ' 
   GET /flixhq/watch-tv?tmdbId=2316&season=1&episode=1
 ```
 
-## Installation
-
-### Locally
-
-Installation is simple.
-
-Run the following command to clone the repository, and install the dependencies.
-
-```sh
-$ git clone https://github.com/BeamlakAschalew/caffeine-api.git
-$ cd caffeine-api
-$ npm install
-```
-
-start the server!
-
-```sh
-$ npm start
-```
-or
-
-```sh
-$ nodemon
-```
-
-### Vercel
-
-Host your own instance of caffeine API on Vercel using the button below.
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%BeamlakAschalew%2Fcaffeine-api)
-
-### Render
-
-Host your own instance of caffeine API on Render using the button below.
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/BeamlakAschalew/caffeine-api)
-
 ## Environment Variables
 
 `TMDB_KEY` (**Required**) : TMDB API key, used to get the metadata of a movie or TV show, can be found at https://www.themoviedb.org/settings/api
@@ -117,14 +78,4 @@ You can cache data that comes from TMDB and from the providers if you have a [Re
 `REDIS_HOST` URL of your Redis database<br>
 `REDIS_PASSWORD` password of your database<br>
 `REDIS_PORT` port of your database connection
-
-
-## Credits
-Most of the code of this script is based on [Consumet API](https://github.com/consumet/api.consumet.org/)<br>
-The script uses [@movie-web/providers](https://www.npmjs.com/package/@movie-web/providers) package
-## Contributors
-<a href="https://github.com/beamlakaschalew/caffeine-api/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=beamlakaschalew/caffeine-api" />
-</a>
-
 
