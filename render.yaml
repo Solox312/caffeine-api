@@ -2,7 +2,7 @@ services:
     - type: web
       name: caffeine-api # Name of the service
       env: docker
-      repo: https://github.com/BeamlakAschalew/caffeine-api.git
+      repo: https://github.com/Solox312/caffeine-api.git
       plan: free
       branch: main
       envVars:
