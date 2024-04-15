@@ -1,7 +1,7 @@
 FROM node:19 as builder
 
 LABEL version="1.0.0"
-LABEL description="FlixQuest API (fastify) Docker Image"
+LABEL description="caffeine API (fastify) Docker Image"
 
 # update packages, to reduce risk of vulnerabilities
 RUN apt-get update && apt-get upgrade -y && apt-get autoclean -y && apt-get autoremove -y
