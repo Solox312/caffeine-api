@@ -15,6 +15,7 @@ import nepu from "./routes/nepu";
 import warezcdn from "./routes/warezcdn";
 import primewire from "./routes/primewire";
 import insertunit from "./routes/insertunit";
+import configRoute from "./routes/config";
 import chalk from "chalk";
 import FastifyCors from "@fastify/cors";
 import dotenv from "dotenv";
@@ -79,6 +80,7 @@ async function startServer() {
     await fastify.register(warezcdn, { prefix: "/warez" });
     await fastify.register(primewire, { prefix: "/primewire" });
     await fastify.register(insertunit, { prefix: "/insertunit" });
+    await fastify.register(configRoute);
 
     try {
         fastify.get("/", async (_, rp) => {

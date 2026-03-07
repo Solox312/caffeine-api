@@ -9,6 +9,18 @@
 
 Hosted instance: https://caffeine-api.vercel.app
 
+### Config endpoint (Caffeine app)
+
+The Caffeine Flutter app fetches runtime config from this endpoint (replaces Firebase Remote Config):
+
+```http
+  GET /config
+```
+
+Returns JSON with keys: `consumet_url`, `vidscr_api`, `opensubtitles_key`, `streaming_server_flixhq`, `streaming_server_dcva`, `streaming_server_zoro`, `ads_enabled`, `route`, `use_external_subtitles`, `ott_ads_enabled`, `trending_holiday_scroller`, `enable_stream`, `enable_chromecast_feature`, `displayVipBanner`, `enable_ott`, `caffeine_api_url`, `forced_update`, `latest_version`, `flixhq_zoe_server`, `gomovies_server`, `vidsrc_server`, `vidsrcto_server`, `tmdb_proxy`.
+
+Set these via environment variables (see `.env.example`).
+
 ## API Reference
 
 #### List of available providers:
@@ -78,4 +90,15 @@ You can cache data that comes from TMDB and from the providers if you have a [Re
 `REDIS_HOST` URL of your Redis database<br>
 `REDIS_PASSWORD` password of your database<br>
 `REDIS_PORT` port of your database connection
+
+### Config endpoint variables (for Caffeine Flutter app)
+
+`CAFFEINE_API_URL` – Public URL of this API (e.g. `https://caffeine-api.vercel.app`). Used in `/config` response.<br>
+`CONSUMET_URL` – Consumet API base URL<br>
+`VIDSRC_API` – VidSrc API URL<br>
+`OPENSUBTITLES_KEY` – OpenSubtitles API key<br>
+`LATEST_VERSION` – App version for forced-update checks (default: `1.7.1`)<br>
+`FORCED_UPDATE` – Set to `true` to force app update<br>
+`STREAMING_SERVER_*`, `FLIXHQ_ZOE_SERVER`, etc. – Streaming server overrides<br>
+`ADS_ENABLED`, `ENABLE_STREAM`, `DISPLAY_VIP_BANNER`, etc. – Feature flags
 
