@@ -21,6 +21,14 @@ function mergeConfig(
     return merged;
 }
 
+function getOverridesFromRow(data: unknown): Record<string, unknown> | null {
+    if (data == null || typeof data !== "object") return null;
+    const raw = data as { config?: unknown };
+    const c = raw.config;
+    if (c == null || typeof c !== "object") return null;
+    return c as Record<string, unknown>;
+}
+
 export default async function configRoute(fastify: FastifyInstance) {
     fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
         const baseConfig = { ...envConfig } as Record<string, unknown>;
@@ -34,17 +42,18 @@ export default async function configRoute(fastify: FastifyInstance) {
                     .eq("id", CONFIG_ROW_ID)
                     .maybeSingle();
 
-                if (!error && data?.config) {
-                    const overrides =
-                        typeof data.config === "object" && data.config !== null
-                            ? (data.config as Record<string, unknown>)
-                            : null;
+                if (error) {
+                    fastify.log.warn({ err: error }, "Supabase config fetch error, using env config");
+                } else {
+                    const overrides = getOverridesFromRow(data);
                     const merged = mergeConfig(baseConfig, overrides);
                     return reply.status(200).send(merged);
                 }
             } catch (err) {
                 fastify.log.warn(err, "Supabase config fetch failed, using env config");
             }
+        } else {
+            fastify.log.debug("Supabase not configured, using env config only");
         }
 
         reply.status(200).send(baseConfig);
