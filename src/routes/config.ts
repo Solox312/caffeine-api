@@ -4,6 +4,11 @@ import { getSupabase } from "../utils/supabase";
 
 const CONFIG_ROW_ID = "00000000-0000-0000-0000-000000000001";
 
+/**
+ * Config keys returned by GET /config (used by Caffeine app and admin panel).
+ * Includes: consumet_url, caffeine_api_url, flix_api_url, and other app settings.
+ */
+
 function mergeConfig(
     base: Record<string, unknown>,
     overrides: Record<string, unknown> | null

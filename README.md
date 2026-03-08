@@ -10,6 +10,19 @@ Hosted instance:
 
 ## API Reference
 
+### Config endpoint
+
+`GET /config` – Returns app configuration for the Caffeine Flutter app. Values come from env vars and Supabase overrides (when admin panel is used).
+
+| Key | Description |
+| :-- | :---------- |
+| `caffeine_api_url` | Base URL for Caffeine API |
+| `flix_api_url` | Base URL for FlixAPI-style scraper (vixsrc, vidsrc, pstream, showbox) |
+| `consumet_url` | Base URL for Consumet providers (goku, sflix, himovies) |
+| `vidscr_api` | VidSrc API key |
+| `opensubtitles_key` | OpenSubtitles API key |
+| ... | See `src/constants/config.ts` for full list |
+
 #### List of available providers:
 
 | Name         | Id             | Status   |
