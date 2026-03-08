@@ -46,7 +46,7 @@ async function startServer() {
 
     try {
         fastify.get("/", async (_, rp) => {
-            rp.status(200).send("Welcome to FlixQuest API! 🎉");
+            rp.status(200).send("Welcome to Caffeine API! 🎉");
         });
         fastify.get("*", (request, reply) => {
             reply.status(404).send({
