@@ -1,5 +1,7 @@
 import Fastify from "fastify";
 import daddylive from "./routes/daddylive";
+import configRoute from "./routes/config";
+import scraperRoutes from "./routes/scraper";
 import chalk from "chalk";
 import FastifyCors from "@fastify/cors";
 import dotenv from "dotenv";
@@ -43,6 +45,8 @@ async function startServer() {
     });
 
     await fastify.register(daddylive, { prefix: "/daddylive" });
+    await fastify.register(configRoute);
+    await fastify.register(scraperRoutes);
 
     try {
         fastify.get("/", async (_, rp) => {

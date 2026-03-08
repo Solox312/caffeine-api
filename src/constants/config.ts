@@ -25,6 +25,7 @@ export const config = {
     displayVipBanner: process.env.DISPLAY_VIP_BANNER !== "false",
     enable_ott: process.env.ENABLE_OTT !== "false",
     caffeine_api_url: baseUrl.replace(/\/$/, ""),
+    flix_api_url: process.env.FLIXAPI_URL || baseUrl.replace(/\/$/, ""),
     forced_update: process.env.FORCED_UPDATE === "true",
     latest_version: process.env.LATEST_VERSION || "1.7.1",
     flixhq_zoe_server: process.env.FLIXHQ_ZOE_SERVER || "vidcloud",
