@@ -63,8 +63,8 @@ Matches Caffeine app's `FlixAPIMultiResponse`:
 | Provider | Status | Notes |
 |----------|--------|-------|
 | **vixsrc** | ✅ Implemented | No API keys required |
-| vidsrc | 🔲 To add | Copy from flixquest-scraper |
-| vidzee | 🔲 To add | May need crypto-js |
+| **vidsrc** | ✅ Implemented | No API keys required |
+| vidzee | 🔲 To add | May need crypto-js (when added) |
 | uhdmovies | 🔲 To add | |
 | showbox | 🔲 To add | Requires FEBBOX_COOKIE |
 | 4khdhub | 🔲 To add | |

@@ -1,6 +1,6 @@
 /**
  * Vixsrc streaming provider - from flixquest-scraper
- * https://github.com/BeamlakAschalew/flixquest-scraper
+ * https://github.com/BeamlakAschalew/flixquest-scraper/blob/main/src/providers/vixsrc.ts
  */
 import type { Provider, ProviderLink, Subtitle } from "../types";
 
@@ -17,10 +17,29 @@ async function makeRequest(
     url: string,
     options: RequestInit = {}
 ): Promise<Response> {
-    const headers = { ...DEFAULT_HEADERS, ...(options.headers as Record<string, string>) };
-    const response = await fetch(url, { method: options.method || "GET", headers, ...options });
-    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    return response;
+    const headers = {
+        ...DEFAULT_HEADERS,
+        ...(options.headers as Record<string, string>),
+    };
+
+    try {
+        const response = await fetch(url, {
+            method: options.method || "GET",
+            headers,
+            ...options,
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return response;
+    } catch (error) {
+        console.error(
+            `[Vixsrc] Request failed for ${url}: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+        throw error;
+    }
 }
 
 async function extractStreamFromPage(
@@ -40,33 +59,70 @@ async function extractStreamFromPage(
         subtitleApiUrl = `https://sub.wyzie.ru/search?id=${contentId}&season=${seasonNum}&episode=${episodeNum}`;
     }
 
+    console.log(`[Vixsrc] Fetching: ${vixsrcUrl}`);
+
     try {
         const response = await makeRequest(vixsrcUrl, {
-            headers: { Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" },
+            headers: {
+                Accept:
+                    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            },
         });
+
         const html = await response.text();
+        console.log(`[Vixsrc] HTML length: ${html.length} characters`);
+
         let masterPlaylistUrl: string | null = null;
 
+        // Method 1: Look for window.masterPlaylist (primary method)
         if (html.includes("window.masterPlaylist")) {
+            console.log("[Vixsrc] Found window.masterPlaylist");
+
             const urlMatch = html.match(/url:\s*['"]([^'"]+)['"]/);
-            const tokenMatch = html.match(/['"]?token['"]?\s*:\s*['"]([^'"]+)['"]/);
-            const expiresMatch = html.match(/['"]?expires['"]?\s*:\s*['"]([^'"]+)['"]/);
+            const tokenMatch = html.match(
+                /['"]?token['"]?\s*:\s*['"]([^'"]+)['"]/
+            );
+            const expiresMatch = html.match(
+                /['"]?expires['"]?\s*:\s*['"]([^'"]+)['"]/
+            );
 
             if (urlMatch && tokenMatch && expiresMatch) {
                 const baseUrl = urlMatch[1];
                 const token = tokenMatch[1];
                 const expires = expiresMatch[1];
-                masterPlaylistUrl = baseUrl.includes("?b=1")
-                    ? `${baseUrl}&token=${token}&expires=${expires}&h=1&lang=en`
-                    : `${baseUrl}?token=${token}&expires=${expires}&h=1&lang=en`;
+
+                console.log("[Vixsrc] Extracted tokens:");
+                console.log(`  - Base URL: ${baseUrl}`);
+                console.log(`  - Token: ${token.substring(0, 20)}...`);
+                console.log(`  - Expires: ${expires}`);
+
+                if (baseUrl.includes("?b=1")) {
+                    masterPlaylistUrl = `${baseUrl}&token=${token}&expires=${expires}&h=1&lang=en`;
+                } else {
+                    masterPlaylistUrl = `${baseUrl}?token=${token}&expires=${expires}&h=1&lang=en`;
+                }
+
+                console.log(
+                    `[Vixsrc] Constructed master playlist URL: ${masterPlaylistUrl}`
+                );
             }
         }
 
+        // Method 2: Look for direct .m3u8 URLs
         if (!masterPlaylistUrl) {
-            const m3u8Match = html.match(/(https?:\/\/[^'"\s]+\.m3u8[^'"\s]*)/);
-            if (m3u8Match) masterPlaylistUrl = m3u8Match[1];
+            const m3u8Match = html.match(
+                /(https?:\/\/[^'"\s]+\.m3u8[^'"\s]*)/
+            );
+            if (m3u8Match) {
+                masterPlaylistUrl = m3u8Match[1];
+                console.log(
+                    "[Vixsrc] Found direct .m3u8 URL:",
+                    masterPlaylistUrl
+                );
+            }
         }
 
+        // Method 3: Look for stream URLs in script tags
         if (!masterPlaylistUrl) {
             const scriptMatches = html.match(/<script[^>]*>([\s\S]*?)<\/script>/g);
             if (scriptMatches) {
@@ -76,15 +132,26 @@ async function extractStreamFromPage(
                     );
                     if (streamMatch) {
                         masterPlaylistUrl = streamMatch[1];
+                        console.log(
+                            "[Vixsrc] Found stream in script:",
+                            masterPlaylistUrl
+                        );
                         break;
                     }
                 }
             }
         }
 
-        if (!masterPlaylistUrl) return null;
+        if (!masterPlaylistUrl) {
+            console.log("[Vixsrc] No master playlist URL found");
+            return null;
+        }
+
         return { masterPlaylistUrl, subtitleApiUrl };
-    } catch {
+    } catch (error) {
+        console.error(
+            `[Vixsrc] Error extracting stream: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
         return null;
     }
 }
@@ -99,13 +166,22 @@ async function getSubtitles(subtitleApiUrl: string): Promise<Subtitle[]> {
     try {
         const response = await makeRequest(subtitleApiUrl);
         const subtitleData: WyzieSubtitle[] = await response.json();
+
         const subtitles: Subtitle[] = [];
-        const encodingPriority = ["ASCII", "UTF-8", "CP1252", "CP1250", "CP850"];
+        const encodingPriority = [
+            "ASCII",
+            "UTF-8",
+            "CP1252",
+            "CP1250",
+            "CP850",
+        ];
 
         let englishSubtitle: WyzieSubtitle | undefined;
         for (const encoding of encodingPriority) {
             englishSubtitle = subtitleData.find(
-                (track) => track.display.includes("English") && track.encoding === encoding
+                (track) =>
+                    track.display.includes("English") &&
+                    track.encoding === encoding
             );
             if (englishSubtitle) break;
         }
@@ -117,6 +193,9 @@ async function getSubtitles(subtitleApiUrl: string): Promise<Subtitle[]> {
                 kind: "captions",
                 default: true,
             });
+            console.log(
+                `[Vixsrc] Found English subtitles: ${englishSubtitle.url}`
+            );
         }
 
         for (const track of subtitleData) {
@@ -128,8 +207,13 @@ async function getSubtitles(subtitleApiUrl: string): Promise<Subtitle[]> {
                 });
             }
         }
+
+        console.log(`[Vixsrc] Total subtitles found: ${subtitles.length}`);
         return subtitles;
-    } catch {
+    } catch (error) {
+        console.log(
+            `[Vixsrc] Subtitle fetch failed: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
         return [];
     }
 }
@@ -140,6 +224,10 @@ async function getVixsrcStreams(
     seasonNum?: number,
     episodeNum?: number
 ): Promise<ProviderLink[]> {
+    console.log(
+        `[Vixsrc] Fetching streams for TMDB ID: ${tmdbId}, Type: ${mediaType}`
+    );
+
     try {
         const streamData = await extractStreamFromPage(
             mediaType,
@@ -147,12 +235,16 @@ async function getVixsrcStreams(
             seasonNum,
             episodeNum
         );
-        if (!streamData) return [];
+
+        if (!streamData) {
+            console.log("[Vixsrc] No stream data found");
+            return [];
+        }
 
         const { masterPlaylistUrl, subtitleApiUrl } = streamData;
         const subtitles = await getSubtitles(subtitleApiUrl);
 
-        return [
+        const links: ProviderLink[] = [
             {
                 server: "vixsrc",
                 url: masterPlaylistUrl,
@@ -161,7 +253,15 @@ async function getVixsrcStreams(
                 subtitles,
             },
         ];
-    } catch {
+
+        console.log(
+            "[Vixsrc] Successfully processed 1 stream with Auto quality"
+        );
+        return links;
+    } catch (error) {
+        console.error(
+            `[Vixsrc] Error in getVixsrcStreams: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
         return [];
     }
 }
@@ -169,10 +269,16 @@ async function getVixsrcStreams(
 export const vixsrcProvider: Provider = {
     name: "Vixsrc",
     id: "vixsrc",
-    async streamMovie(tmdbId: string) {
+
+    async streamMovie(tmdbId: string): Promise<ProviderLink[]> {
         return getVixsrcStreams(tmdbId, "movie");
     },
-    async streamTV(tmdbId: string, season: number, episode: number) {
+
+    async streamTV(
+        tmdbId: string,
+        season: number,
+        episode: number
+    ): Promise<ProviderLink[]> {
         return getVixsrcStreams(tmdbId, "tv", season, episode);
     },
 };

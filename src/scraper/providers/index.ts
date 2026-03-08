@@ -3,11 +3,13 @@
  * Providers from https://github.com/BeamlakAschalew/flixquest-scraper
  */
 import type { Provider } from "../types";
+import { vidsrcProvider } from "./vidsrc";
 import { vixsrcProvider } from "./vixsrc";
 
 export const providers: Record<string, Provider> = {
     vixsrc: vixsrcProvider,
-    // Add more as you integrate: vidsrc, vidzee, uhdmovies, showbox, 4khdhub
+    vidsrc: vidsrcProvider,
+    // Add more as you integrate: vidzee, uhdmovies, showbox, 4khdhub
 };
 
 export function getProvider(providerId: string): Provider | undefined {
