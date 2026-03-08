@@ -1,30 +1,9 @@
 import Fastify from "fastify";
-import showbox from "./routes/showbox";
-import flixhq from "./routes/flixhq";
-import zoe from "./routes/zoe";
-import remotestream from "./routes/remotestream";
-import smashystream from "./routes/smashystream";
-import gomovies from "./routes/gomovies";
-import ridomovies from "./routes/ridomovies";
-import vidsrc from "./routes/vidsrc";
-import vidsrcto from "./routes/vidsrcto";
-import kissasian from "./routes/kissasian";
-import goojara from "./routes/goojara";
 import daddylive from "./routes/daddylive";
-import nepu from "./routes/nepu";
-import warezcdn from "./routes/warezcdn";
-import primewire from "./routes/primewire";
-import insertunit from "./routes/insertunit";
-import configRoute from "./routes/config";
 import chalk from "chalk";
 import FastifyCors from "@fastify/cors";
 import dotenv from "dotenv";
 import Redis from "ioredis";
-import {
-    buildProviders,
-    targets,
-    makeStandardFetcher,
-} from "@movie-web/providers";
 dotenv.config();
 
 export const workers_url = process.env.WORKERS_URL && process.env.WORKERS_URL;
@@ -63,28 +42,11 @@ async function startServer() {
         methods: "GET",
     });
 
-    await fastify.register(showbox, { prefix: "/superstream" });
-    await fastify.register(showbox, { prefix: "/showbox" });
-    await fastify.register(flixhq, { prefix: "/flixhq" });
-    await fastify.register(zoe, { prefix: "/zoe" });
-    await fastify.register(remotestream, { prefix: "/remotestream" });
-    await fastify.register(smashystream, { prefix: "/smashystream" });
-    await fastify.register(gomovies, { prefix: "/gomovies" });
-    await fastify.register(ridomovies, { prefix: "/ridomovies" });
-    await fastify.register(vidsrc, { prefix: "/vidsrc" });
-    await fastify.register(vidsrcto, { prefix: "/vidsrcto" });
-    await fastify.register(kissasian, { prefix: "/kissasian" });
-    await fastify.register(goojara, { prefix: "/goojara" });
-    await fastify.register(nepu, { prefix: "/nepu" });
     await fastify.register(daddylive, { prefix: "/daddylive" });
-    await fastify.register(warezcdn, { prefix: "/warez" });
-    await fastify.register(primewire, { prefix: "/primewire" });
-    await fastify.register(insertunit, { prefix: "/insertunit" });
-    await fastify.register(configRoute);
 
     try {
         fastify.get("/", async (_, rp) => {
-            rp.status(200).send("Welcome to caffeine API! 🎉");
+            rp.status(200).send("Welcome to FlixQuest API! 🎉");
         });
         fastify.get("*", (request, reply) => {
             reply.status(404).send({

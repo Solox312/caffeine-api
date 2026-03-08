@@ -32,4 +32,11 @@ export const config = {
     vidsrc_server: process.env.VIDSRC_SERVER || "vidsrcembed",
     vidsrcto_server: process.env.VIDSRCTO_SERVER || "vidplay",
     tmdb_proxy: process.env.TMDB_PROXY || "",
+    new_flixhq_url: process.env.NEW_FLIXHQ_URL || "",
+    new_flixhq_server: process.env.NEW_FLIXHQ_SERVER || "megacloud",
+    goku_server: process.env.GOKU_SERVER || "vidcloud",
+    sflix_server: process.env.SFLIX_SERVER || "vidcloud",
+    himovies_server: process.env.HIMOVIES_SERVER || "vidcloud",
+    animekai_server: process.env.ANIMEKAI_SERVER || "vidcloud",
+    hianime_server: process.env.HIANIME_SERVER || "vidcloud",
 };

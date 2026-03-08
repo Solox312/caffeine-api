@@ -1,25 +1,15 @@
 <p align="center">
-    <img alt="Consumet" src="https://github.com/Webcap/webcap.github.io/blob/trunk/caffiene/res/assets/images/logo.png?raw=true" width="200">
+    <img alt="Consumet" src="https://raw.githubusercontent.com/BeamlakAschalew/beamlakaschalew.github.io/main/cinemax/res/assets/images/logo.png" width="150">
 </p>
-<h1 align="center">caffeine API</h1>
+<h1 align="center">FlixQuest API</h1>
 
 <p align="center">REST API that fetches streaming links of movies and TV shows based on TMDB id using @movie-web/providers package</p>
 
+<p align="center"><a src="https://github.com/BeamlakAschalew/flixquest-api/actions/workflows/node.js.yml"><img src="https://github.com/BeamlakAschalew/flixquest-api/actions/workflows/node.js.yml/badge.svg" alt="Node build badge"></a>
+<a src="https://github.com/BeamlakAschalew/flixquest-api/blob/main/LICENSE"><img src="https://img.shields.io/github/license/BeamlakAschalew/flixquest-api"></img></a>
 </p>
 
-Hosted instance: https://caffeine-api.vercel.app
-
-### Config endpoint (Caffeine app)
-
-The Caffeine Flutter app fetches runtime config from this endpoint (replaces Firebase Remote Config):
-
-```http
-  GET /config
-```
-
-Returns JSON with keys: `consumet_url`, `vidscr_api`, `opensubtitles_key`, `streaming_server_flixhq`, `streaming_server_dcva`, `streaming_server_zoro`, `ads_enabled`, `route`, `use_external_subtitles`, `ott_ads_enabled`, `trending_holiday_scroller`, `enable_stream`, `enable_chromecast_feature`, `displayVipBanner`, `enable_ott`, `caffeine_api_url`, `forced_update`, `latest_version`, `flixhq_zoe_server`, `gomovies_server`, `vidsrc_server`, `vidsrcto_server`, `tmdb_proxy`.
-
-Set these via environment variables (see `.env.example`).
+Hosted instance: https://flixquest-api.vercel.app
 
 ## API Reference
 
@@ -76,6 +66,43 @@ Get streaming link and subtitles for the TV show 'The Office' from the 'FlixHQ' 
   GET /flixhq/watch-tv?tmdbId=2316&season=1&episode=1
 ```
 
+## Installation
+
+### Locally
+
+Installation is simple.
+
+Run the following command to clone the repository, and install the dependencies.
+
+```sh
+$ git clone https://github.com/BeamlakAschalew/flixquest-api.git
+$ cd flixquest-api
+$ npm install
+```
+
+start the server!
+
+```sh
+$ npm start
+```
+or
+
+```sh
+$ nodemon
+```
+
+### Vercel
+
+Host your own instance of FlixQuest API on Vercel using the button below.
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%BeamlakAschalew%2Fflixquest-api)
+
+### Render
+
+Host your own instance of FlixQuest API on Render using the button below.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/BeamlakAschalew/flixquest-api)
+
 ## Environment Variables
 
 `TMDB_KEY` (**Required**) : TMDB API key, used to get the metadata of a movie or TV show, can be found at https://www.themoviedb.org/settings/api
@@ -91,14 +118,13 @@ You can cache data that comes from TMDB and from the providers if you have a [Re
 `REDIS_PASSWORD` password of your database<br>
 `REDIS_PORT` port of your database connection
 
-### Config endpoint variables (for Caffeine Flutter app)
 
-`CAFFEINE_API_URL` – Public URL of this API (e.g. `https://caffeine-api.vercel.app`). Used in `/config` response.<br>
-`CONSUMET_URL` – Consumet API base URL<br>
-`VIDSRC_API` – VidSrc API URL<br>
-`OPENSUBTITLES_KEY` – OpenSubtitles API key<br>
-`LATEST_VERSION` – App version for forced-update checks (default: `1.7.1`)<br>
-`FORCED_UPDATE` – Set to `true` to force app update<br>
-`STREAMING_SERVER_*`, `FLIXHQ_ZOE_SERVER`, etc. – Streaming server overrides<br>
-`ADS_ENABLED`, `ENABLE_STREAM`, `DISPLAY_VIP_BANNER`, etc. – Feature flags
+## Credits
+Most of the code of this script is based on [Consumet API](https://github.com/consumet/api.consumet.org/)<br>
+The script uses [@movie-web/providers](https://www.npmjs.com/package/@movie-web/providers) package
+## Contributors
+<a href="https://github.com/beamlakaschalew/flixquest-api/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=beamlakaschalew/flixquest-api" />
+</a>
+
 

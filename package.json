@@ -1,5 +1,5 @@
 {
-    "name": "caffeine-api",
+    "name": "flixquest-api",
     "version": "1.1.1",
     "description": "A node app that uses @movie-web/providers to scrape streaming sites",
     "main": "src/index.ts",
@@ -13,7 +13,6 @@
     "license": "ISC",
     "dependencies": {
         "@fastify/cors": "^8.4.1",
-        "@movie-web/providers": "^2.3.0",
         "@types/dotenv": "^8.2.0",
         "axios": "^1.6.2",
         "chalk": "4.1.2",
