@@ -15,11 +15,6 @@ Hosted instance:
 | Name         | Id             | Status   |
 | :----------- | :------------- | :------- |
 | ShowBox      | `showbox`      | 🟢 200   |
-| FlixHQ       | `flixhq`       | 🔴 500   |
-| ZoeChip      | `zoe`          | 🔴 500   |
-| SmashyStream | `smashystream` | 🔴 500   |
-| RemoteStream | `remotestream` | 🔴 500   |
-| Gomovies     | `gomovies`     | 🔴 500   |
 | VidSrc       | `vidsrc`       | 🟢 200   |
 | VidSrcTo     | `vidsrcto`     | 🟢 200   |
 
@@ -31,15 +26,15 @@ Hosted instance:
 | `proxied` | `bool` | Optional. `true` or `false` value.<br><br>If set `true` or `proxied` parameter is left empty, the script uses the proxy URL that is found in the environment variable.<br/>Otherwise if set `false` the script will make a raw request towards the provider. |
 
 ```http
-  GET /{provider ID}/watch-movie?tmdbId=tmdbId
+  GET /{provider ID}/stream-movie?tmdbId=tmdbId
 ```
 
 #### Example
 
-Get streaming link and subtitles for the movie 'The Hangover 1' from the 'FlixHQ' provider
+Get streaming link and subtitles for the movie 'The Hangover 1' from the 'Vixsrc' provider
 
 ```http
-  GET /flixhq/watch-movie?tmdbId=18785
+  GET /vixsrc/stream-movie?tmdbId=18785
 ```
 
 ### Get all links and subtitles for an episode
@@ -52,15 +47,15 @@ Get streaming link and subtitles for the movie 'The Hangover 1' from the 'FlixHQ
 | `proxied` | `bool` | Optional. `true` or `false` value.<br><br>If set `true` or `proxied` parameter is left empty, the script uses the proxy URL that is found in the environment variable.<br/>Otherwise if set `false` the script will make a raw request towards the provider. |
 
 ```http
-  GET /{provider ID}/watch-tv?tmdbId=tmdbId&season=season&episode=episode
+  GET /{provider ID}/stream-tv?tmdbId=tmdbId&season=season&episode=episode
 ```
 
 #### Example
 
-Get streaming link and subtitles for the TV show 'The Office' from the 'FlixHQ' provider
+Get streaming link and subtitles for the TV show 'The Office' from the 'Vixsrc' provider
 
 ```http
-  GET /flixhq/watch-tv?tmdbId=2316&season=1&episode=1
+  GET /vixsrc/stream-tv?tmdbId=2316&season=1&episode=1
 ```
 
 ## Installation
