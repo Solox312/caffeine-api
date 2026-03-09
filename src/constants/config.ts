@@ -21,7 +21,6 @@ export const config = {
     trending_holiday_scroller: process.env.TRENDING_HOLIDAY_SCROLLER !== "false",
     enable_stream: process.env.ENABLE_STREAM !== "false",
     enable_chromecast_feature: process.env.ENABLE_CHROMECAST !== "false",
-    displayVipBanner: process.env.DISPLAY_VIP_BANNER !== "false",
     enable_ott: process.env.ENABLE_OTT !== "false",
     caffeine_api_url: baseUrl.replace(/\/$/, ""),
     flix_api_url: process.env.FLIXAPI_URL || baseUrl.replace(/\/$/, ""),
