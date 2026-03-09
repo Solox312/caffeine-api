@@ -23,6 +23,10 @@ function mergeConfig(
             merged[key] = value;
         }
     }
+    // Ensure displayVipBanner is always present so the app can hide the banner when set to false
+    if (Object.prototype.hasOwnProperty.call(overrides, "displayVipBanner")) {
+        merged.displayVipBanner = overrides.displayVipBanner;
+    }
     return merged;
 }
 
