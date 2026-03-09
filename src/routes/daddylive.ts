@@ -17,19 +17,18 @@ const routes = async (fastify: FastifyInstance) => {
 
     fastify.get("/live", async (_, rp) => {
         const channels = await get247();
-        if (channels) {
-            rp.status(200).send({
+        if (channels && channels.length > 0) {
+            return rp.status(200).send({
                 base_url: daddyliveStreamBaseUrl,
                 trailing_url: daddyliveTrailingUrl,
                 referrer: daddyliveReferrer,
                 user_agent: daddyliveUserAgent,
-                channels: channels,
-            });
-        } else {
-            rp.status(500).send({
-                message: "Unknown error occured. Could not fetch channels",
+                channels,
             });
         }
+        return rp.status(503).send({
+            message: "Channels temporarily unavailable. The source may be down or changed.",
+        });
     });
 };
 
