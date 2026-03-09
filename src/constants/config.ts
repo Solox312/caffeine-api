@@ -9,7 +9,7 @@ const baseUrl =
     "http://localhost:3000";
 
 export const config = {
-    consumet_url: process.env.CONSUMET_URL || "https://api.consumet.org",
+    consumet_url: process.env.CONSUMET_URL || "https://consumet-api-livid.vercel.app/",
     vidscr_api: process.env.VIDSRC_API || "",
     opensubtitles_key: process.env.OPENSUBTITLES_KEY || "",
     streaming_server_dcva: process.env.STREAMING_SERVER_DCVA || "asianload",
