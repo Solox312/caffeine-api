@@ -2,7 +2,10 @@ import Fastify from "fastify";
 import daddylive from "./routes/daddylive";
 import configRoute from "./routes/config";
 import scraperRoutes from "./routes/scraper";
+import statusRoute from "./routes/status";
 import chalk from "chalk";
+import { readFileSync } from "fs";
+import { join } from "path";
 import FastifyCors from "@fastify/cors";
 import dotenv from "dotenv";
 import Redis from "ioredis";
@@ -47,6 +50,13 @@ async function startServer() {
     await fastify.register(daddylive, { prefix: "/daddylive" });
     await fastify.register(configRoute);
     await fastify.register(scraperRoutes);
+    const pkg = JSON.parse(
+        readFileSync(join(__dirname, "..", "package.json"), "utf-8")
+    ) as { version: string };
+    await fastify.register(statusRoute, {
+        redis: redis || undefined,
+        version: pkg.version,
+    });
 
     try {
         fastify.get("/", async (_, rp) => {
