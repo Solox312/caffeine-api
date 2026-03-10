@@ -4,7 +4,6 @@ import streameastRoutes from "./routes/streameast";
 import configRoute from "./routes/config";
 import scraperRoutes from "./routes/scraper";
 import statusRoute from "./routes/status";
-import internalRoutes from "./routes/internal";
 import chalk from "chalk";
 import { readFileSync } from "fs";
 import { join } from "path";
@@ -46,7 +45,7 @@ async function startServer() {
     });
     await fastify.register(FastifyCors, {
         origin: "*",
-        methods: ["GET", "POST"],
+        methods: "GET",
     });
 
     await fastify.register(daddylive, { prefix: "/daddylive" });
@@ -60,8 +59,6 @@ async function startServer() {
         redis: redis || undefined,
         version: pkg.version,
     });
-    await fastify.register(internalRoutes, { prefix: "/internal" });
-
     try {
         fastify.get("/", async (_, rp) => {
             rp.status(200).send("Welcome to Caffeine API! 🎉");
