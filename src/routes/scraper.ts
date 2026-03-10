@@ -9,13 +9,44 @@ import { generateMovieMedia, generateShowMedia } from "../scraper/utils/tmdb";
 import type { ProviderResponse } from "../scraper/types";
 
 export default async function scraperRoutes(fastify: FastifyInstance) {
-    // List providers
+    // List providers (id + name only)
     fastify.get("/providers", async (_request: FastifyRequest, reply: FastifyReply) => {
         const providerList = getAllProviderIds().map((id) => {
             const p = getProvider(id);
             return { id, name: p?.name ?? id };
         });
         return reply.status(200).send({ success: true, providers: providerList });
+    });
+
+    // List providers with active status (probes each provider with a quick stream check)
+    const PROBE_TMDB_ID = "550"; // Fight Club – widely available
+    const PROBE_TIMEOUT_MS = 5000;
+
+    fastify.get("/providers/status", async (_request: FastifyRequest, reply: FastifyReply) => {
+        const ids = getAllProviderIds();
+        const results = await Promise.allSettled(
+            ids.map(async (id) => {
+                const provider = getProvider(id);
+                const name = provider?.name ?? id;
+                if (!provider) return { id, name, active: false };
+                try {
+                    const links = await Promise.race([
+                        provider.streamMovie(PROBE_TMDB_ID),
+                        new Promise<never>((_, reject) =>
+                            setTimeout(() => reject(new Error("Timeout")), PROBE_TIMEOUT_MS)
+                        ),
+                    ]);
+                    return { id, name, active: Array.isArray(links) && links.length > 0 };
+                } catch {
+                    return { id, name, active: false };
+                }
+            })
+        );
+
+        const providers = results.map((r) =>
+            r.status === "fulfilled" ? r.value : { id: "unknown", name: "?", active: false }
+        );
+        return reply.status(200).send({ success: true, providers });
     });
 
     // Stream movie - GET /:provider/stream-movie?tmdbId=556574
