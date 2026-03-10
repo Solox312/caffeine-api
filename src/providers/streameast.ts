@@ -136,7 +136,12 @@ export async function getEvents(): Promise<{ baseUrl: string; events: LiveEvent[
             const events: LiveEvent[] = [];
             const seen = new Set<string>();
 
-            // Accept any path like /category/slug where category looks like a sport (letters, 2–15 chars)
+            // Path segments that are league/category index pages, not individual events (no stream links on those pages)
+            const nonEventSegments = new Set([
+                "leagues", "league", "sports", "category", "categories", "live", "premium", "multi",
+                "updates", "search", "login", "register", "account", "contact", "about", "terms",
+            ]);
+            // Accept path like /sport/slug where sport looks like a sport and slug is an event (e.g. team-vs-team)
             $("a[href]").each((_, el) => {
                 const href = $(el).attr("href");
                 if (!href || href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("mailto:"))
@@ -152,7 +157,9 @@ export async function getEvents(): Promise<{ baseUrl: string; events: LiveEvent[
                 const parts = path.split("/").filter(Boolean);
                 if (parts.length < 2) return;
                 const [sport, ...rest] = parts;
-                if (!/^[a-z]{2,15}$/.test(sport.toLowerCase())) return;
+                const sportLower = sport.toLowerCase();
+                if (!/^[a-z]{2,15}$/.test(sportLower)) return;
+                if (nonEventSegments.has(sportLower)) return;
                 const slug = rest.join("/");
                 if (!slug || slug.length < 2) return;
                 const id = `${sport}-${slug}`;
