@@ -71,6 +71,7 @@ async function serversLoad(
                 ? "https:" + baseFrameSrc
                 : baseFrameSrc;
             BASEDOM = new URL(fullUrl).origin;
+            console.log(`[VidSrc] Updated BASEDOM to: ${BASEDOM}`);
         } catch {
             const originMatch = (
                 baseFrameSrc.startsWith("//")
@@ -79,6 +80,7 @@ async function serversLoad(
             ).match(/^(https?:\/\/[^/]+)/);
             if (originMatch && originMatch[1]) {
                 BASEDOM = originMatch[1];
+                console.log(`[VidSrc] Updated BASEDOM via regex fallback to: ${BASEDOM}`);
             }
         }
     }
@@ -157,6 +159,7 @@ async function parseMasterM3U8(
 async function PRORCPhandler(prorcp: string): Promise<StreamQuality[] | null> {
     try {
         const prorcpUrl = `${BASEDOM}/prorcp/${prorcp}`;
+        console.log(`[VidSrc] Fetching PRORCP: ${prorcpUrl}`);
 
         const prorcpFetch = await makeRequest(prorcpUrl, {
             headers: {
@@ -174,6 +177,7 @@ async function PRORCPhandler(prorcp: string): Promise<StreamQuality[] | null> {
 
         if (match && match[1]) {
             const masterM3U8Url = match[1];
+            console.log(`[VidSrc] Found master M3U8: ${masterM3U8Url}`);
             const m3u8FileFetch = await makeRequest(masterM3U8Url, {
                 headers: { Referer: prorcpUrl, Accept: "*/*" },
             });
@@ -181,6 +185,7 @@ async function PRORCPhandler(prorcp: string): Promise<StreamQuality[] | null> {
             return parseMasterM3U8(m3u8Content, masterM3U8Url);
         }
 
+        console.warn("[VidSrc] No master M3U8 URL found in prorcp response");
         return null;
     } catch (error) {
         console.error(
@@ -196,6 +201,7 @@ async function SRCRCPhandler(
 ): Promise<StreamQuality[] | null> {
     try {
         const srcrcpUrl = BASEDOM + srcrcpPath;
+        console.log(`[VidSrc] Fetching SRCRCP: ${srcrcpUrl}`);
 
         const response = await makeRequest(srcrcpUrl, {
             headers: {
@@ -213,6 +219,7 @@ async function SRCRCPhandler(
         const fileMatch = fileRegex.exec(responseText);
         if (fileMatch && fileMatch[1]) {
             const masterM3U8Url = fileMatch[1];
+            console.log(`[VidSrc] Found M3U8 URL (file match): ${masterM3U8Url}`);
             const m3u8FileFetch = await makeRequest(masterM3U8Url, {
                 headers: { Referer: srcrcpUrl, Accept: "*/*" },
             });
@@ -221,6 +228,7 @@ async function SRCRCPhandler(
         }
 
         if (responseText.trim().startsWith("#EXTM3U")) {
+            console.log("[VidSrc] Response is M3U8 playlist directly");
             return parseMasterM3U8(responseText, srcrcpUrl);
         }
 
@@ -241,6 +249,7 @@ async function SRCRCPhandler(
                 const m = scriptContent.match(pattern);
                 if (m && m[1]) {
                     const m3u8Url = m[1];
+                    console.log(`[VidSrc] Found M3U8 URL in script: ${m3u8Url}`);
                     const absoluteM3u8Url = m3u8Url.startsWith("http")
                         ? m3u8Url
                         : new URL(m3u8Url, srcrcpUrl).href;
@@ -253,6 +262,7 @@ async function SRCRCPhandler(
             }
         }
 
+        console.warn(`[VidSrc] No stream found for SRCRCP: ${srcrcpUrl}`);
         return null;
     } catch (error) {
         console.error(
@@ -286,6 +296,7 @@ async function getStreamContent(
     type: "movie" | "tv"
 ): Promise<ProviderLink[]> {
     const url = getUrl(id, type);
+    console.log(`[VidSrc] Fetching embed page: ${url}`);
 
     try {
         const embedRes = await makeRequest(url, {
@@ -293,6 +304,8 @@ async function getStreamContent(
         });
         const embedResp = await embedRes.text();
         const { servers } = await serversLoad(embedResp);
+
+        console.log(`[VidSrc] Found ${servers.length} servers`);
 
         const serverPromises = servers.map(async (server) => {
             if (!server.dataHash) return null;
@@ -309,7 +322,10 @@ async function getStreamContent(
                 const rcpHtml = await rcpRes.text();
                 const rcpData = await rcpGrabber(rcpHtml);
 
-                if (!rcpData || !rcpData.data) return null;
+                if (!rcpData || !rcpData.data) {
+                    console.warn(`[VidSrc] Skipping server ${server.name} - no rcp data`);
+                    return null;
+                }
 
                 let streamDetails: StreamQuality[] | null = null;
 
@@ -322,10 +338,16 @@ async function getStreamContent(
                         server.name === "Superembed" ||
                         server.name === "2Embed"
                     ) {
+                        console.warn(
+                            `[VidSrc] Skipping known problematic server: ${server.name}`
+                        );
                         return null;
                     }
                     streamDetails = await SRCRCPhandler(rcpData.data, rcpUrl);
                 } else {
+                    console.warn(
+                        `[VidSrc] Unhandled rcp data type for ${server.name}: ${rcpData.data.substring(0, 50)}`
+                    );
                     return null;
                 }
 
@@ -340,7 +362,10 @@ async function getStreamContent(
                 }
 
                 return null;
-            } catch {
+            } catch (e) {
+                console.error(
+                    `[VidSrc] Error processing server ${server.name}: ${e instanceof Error ? e.message : "Unknown error"}`
+                );
                 return null;
             }
         });
@@ -354,6 +379,7 @@ async function getStreamContent(
             }
         }
 
+        console.log(`[VidSrc] Found ${allLinks.length} total stream links`);
         return allLinks;
     } catch (error) {
         console.error(
