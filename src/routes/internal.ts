@@ -7,8 +7,9 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 const INTERNAL_KEY = process.env.INTERNAL_API_KEY || "";
 
 function isAuthorized(request: FastifyRequest): boolean {
+    if (!INTERNAL_KEY) return true; // No key configured: allow (e.g. local dev)
     const key = request.headers["x-internal-key"];
-    return typeof key === "string" && key.length > 0 && (INTERNAL_KEY === "" || key === INTERNAL_KEY);
+    return typeof key === "string" && key === INTERNAL_KEY;
 }
 
 /** Extract live stream URLs from HTML/JS text (m3u8, mpd, common CDN patterns) */
