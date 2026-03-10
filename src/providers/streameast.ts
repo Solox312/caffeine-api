@@ -33,6 +33,19 @@ export interface LiveEvent {
     logoUrl?: string;
 }
 
+function normalizeUrl(u: string): string {
+    return u.replace(/\\\//g, "/").replace(/\\/g, "").trim();
+}
+
+function isValidHttpUrl(s: string): boolean {
+    try {
+        const parsed = new URL(s);
+        return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+        return false;
+    }
+}
+
 /** Extract live stream URLs from HTML/JS (m3u8, mpd, stream paths) */
 function extractStreamLinks(text: string, baseUrl: string): string[] {
     const out = new Set<string>();
@@ -43,51 +56,47 @@ function extractStreamLinks(text: string, baseUrl: string): string[] {
         origin = DEFAULT_ORIGIN;
     }
 
-    const m3u8Re = /https?:\/\/[^\s"'<>)\]]+\.m3u8(?:\?[^\s"'<>)\]]*)?/gi;
-    const mpdRe = /https?:\/\/[^\s"'<>)\]]+\.mpd(?:\?[^\s"'<>)\]]*)?/gi;
-    for (const m of text.matchAll(m3u8Re)) out.add(m[0].replace(/\\\//g, "/"));
-    for (const m of text.matchAll(mpdRe)) out.add(m[0].replace(/\\\//g, "/"));
+    const add = (raw: string) => {
+        const u = normalizeUrl(raw);
+        if (u.startsWith("http") && isValidHttpUrl(u)) out.add(u);
+    };
+
+    const m3u8Re = /https?:\/\/[^\s"'<>)\]\}]+\.m3u8(?:\?[^\s"'<>)\]\}]*)?/gi;
+    const mpdRe = /https?:\/\/[^\s"'<>)\]\}]+\.mpd(?:\?[^\s"'<>)\]\}]*)?/gi;
+    for (const m of text.matchAll(m3u8Re)) add(m[0]);
+    for (const m of text.matchAll(mpdRe)) add(m[0]);
 
     const escapedRe = /(?:https?:\\?\/\\?\/[^"'\s\\]+\.(?:m3u8|mpd)(?:[^"'\s\\]*)?)/gi;
-    for (const m of text.matchAll(escapedRe)) {
-        const u = m[0].replace(/\\\//g, "/").replace(/\\/g, "");
-        if (u.startsWith("http")) out.add(u);
-    }
+    for (const m of text.matchAll(escapedRe)) add(m[0]);
 
-    const quotedRe = /["'](https?:\/\/[^"']*(?:m3u8|mpd)[^"']*)["']/gi;
+    const quotedRe = /["'`](https?:\/\/[^"'`]*(?:m3u8|mpd)[^"'`]*)["'`]/gi;
     for (const m of text.matchAll(quotedRe)) {
-        if (m[1]) out.add(m[1].replace(/\\\//g, "/"));
+        if (m[1]) add(m[1]);
     }
 
-    const relRe = /["'](\/(?!\/)[^"']*\.(?:m3u8|mpd)(?:\?[^"']*)?)["']/gi;
+    const relRe = /["'`](\/(?!\/)[^"'`]*\.(?:m3u8|mpd)(?:\?[^"'`]*)?)["'`]/gi;
     for (const m of text.matchAll(relRe)) {
-        if (m[1]) out.add(origin + m[1]);
+        if (m[1]) add(origin + m[1]);
     }
 
-    const livePathRe = /https?:\/\/[^\s"'<>)\]]+(?:\/live\/|\/stream\/|\/hls\/|\/dash\/)[^\s"'<>)\]]+/gi;
-    for (const m of text.matchAll(livePathRe)) out.add(m[0].replace(/\\\//g, "/"));
+    const livePathRe = /https?:\/\/[^\s"'<>)\]]+(?:\/live\/|\/stream\/|\/hls\/|\/dash\/|\/m3u8\/)[^\s"'<>)\]]+/gi;
+    for (const m of text.matchAll(livePathRe)) add(m[0]);
 
-    // JS/JSON patterns: file:"...m3u8", sources:[{file:"..."}], url:"...m3u8"
-    const jsFileRe = /(?:file|src|url|source)\s*[:=]\s*["'](https?:\/\/[^"']*\.(?:m3u8|mpd)[^"']*)["']/gi;
+    const jsFileRe = /(?:file|src|url|source|hlsUrl|streamUrl|playlist)\s*[:=]\s*["'`]?(https?:\/\/[^"'\s)\]\},]+\.(?:m3u8|mpd)[^"'\s)\]\},]*)["'`]?/gi;
     for (const m of text.matchAll(jsFileRe)) {
-        if (m[1]) out.add(m[1].replace(/\\\//g, "/"));
+        if (m[1]) add(m[1]);
     }
     const jsUnescapedRe = /(?:file|src|url|source)\s*[:=]\s*["'](https?:\\?\/\\?\/[^"']+\.(?:m3u8|mpd)[^"']*)["']/gi;
     for (const m of text.matchAll(jsUnescapedRe)) {
-        if (m[1]) {
-            const u = m[1].replace(/\\\//g, "/").replace(/\\/g, "");
-            if (u.startsWith("http")) out.add(u);
-        }
+        if (m[1]) add(m[1]);
     }
 
-    return Array.from(out).filter((u) => {
-        try {
-            const parsed = new URL(u);
-            return parsed.protocol === "http:" || parsed.protocol === "https:";
-        } catch {
-            return false;
-        }
-    });
+    const jsonLikeRe = /(?:sources|sourcesList|playlist)\s*[\[:]\s*[^\]]*?(https?:\/\/[^\s"'\]]+\.(?:m3u8|mpd)[^\s"'\]]*)/gi;
+    for (const m of text.matchAll(jsonLikeRe)) {
+        if (m[1]) add(m[1]);
+    }
+
+    return Array.from(out);
 }
 
 /** Extract iframe and embed-like URLs from HTML (iframe src, data-src, embed links) */
@@ -98,19 +107,26 @@ function extractIframeSrcs(html: string, pageOrigin: string): string[] {
         if (!raw || raw.startsWith("javascript:") || raw.startsWith("data:") || raw.length < 10) return;
         try {
             const full = new URL(raw, pageOrigin).href;
-            if (full.startsWith("http")) out.add(full);
+            if (full.startsWith("http") && !full.startsWith("https://www.google.com")) out.add(full);
         } catch {
             // ignore
         }
     };
     $("iframe[src]").each((_, el) => addUrl($(el).attr("src")));
     $("iframe[data-src]").each((_, el) => addUrl($(el).attr("data-src")));
+    $("iframe[data-lazy-src]").each((_, el) => addUrl($(el).attr("data-lazy-src")));
     $("[data-embed]").each((_, el) => addUrl($(el).attr("data-embed")));
     $("[data-src]").each((_, el) => addUrl($(el).attr("data-src")));
-    $('a[href*="embed"], a[href*="player"]').each((_, el) => {
+    $("[data-url]").each((_, el) => addUrl($(el).attr("data-url")));
+    $('a[href*="embed"], a[href*="player"], a[href*="stream"]').each((_, el) => {
         const href = $(el).attr("href");
-        if (href && (href.includes("/embed") || href.includes("/player"))) addUrl(href);
+        if (href && /embed|player|stream|watch/.test(href)) addUrl(href);
     });
+    const scriptHtml = $("script").text();
+    const iframeInScript = /(?:src|url|iframe)\s*[:=]\s*["'](https?:\/\/[^"']+(?:embed|player|stream|watch)[^"']*)["']/gi;
+    for (const m of scriptHtml.matchAll(iframeInScript)) {
+        if (m[1]) addUrl(m[1]);
+    }
     return Array.from(out);
 }
 
@@ -240,22 +256,39 @@ export async function getStreamLinks(eventUrl: string): Promise<{ url: string; l
     console.log(`[Streameast] getStreamLinks: main page yielded ${mainLinks.length} link(s)`);
 
     const iframeSrcs = extractIframeSrcs(html, resolved);
-    if (iframeSrcs.length > 0) {
-        console.log(`[Streameast] getStreamLinks: found ${iframeSrcs.length} embed/iframe(s), fetching up to 5`);
-        const toFetch = iframeSrcs.slice(0, 5);
+    const toFetch = iframeSrcs.slice(0, 8);
+    if (toFetch.length > 0) {
+        console.log(`[Streameast] getStreamLinks: found ${iframeSrcs.length} embed/iframe(s), fetching up to ${toFetch.length}`);
         for (const iframeUrl of toFetch) {
             try {
                 const iframeHtml = await fetchWithTimeout(iframeUrl, {
                     referrer: resolved,
-                    timeoutMs: 10000,
+                    timeoutMs: 12000,
                 });
                 const embedLinks = extractStreamLinks(iframeHtml, iframeUrl);
                 embedLinks.forEach((u) => allLinks.add(u));
                 if (embedLinks.length > 0) {
-                    console.log(`[Streameast] getStreamLinks: iframe ${iframeUrl.slice(0, 50)}... yielded ${embedLinks.length} link(s)`);
+                    console.log(`[Streameast] getStreamLinks: iframe yielded ${embedLinks.length} link(s)`);
+                } else {
+                    const nestedIframes = extractIframeSrcs(iframeHtml, iframeUrl);
+                    for (const nestedUrl of nestedIframes.slice(0, 3)) {
+                        try {
+                            const nestedHtml = await fetchWithTimeout(nestedUrl, {
+                                referrer: iframeUrl,
+                                timeoutMs: 10000,
+                            });
+                            const nestedLinks = extractStreamLinks(nestedHtml, nestedUrl);
+                            nestedLinks.forEach((u) => allLinks.add(u));
+                            if (nestedLinks.length > 0) {
+                                console.log(`[Streameast] getStreamLinks: nested iframe yielded ${nestedLinks.length} link(s)`);
+                            }
+                        } catch {
+                            // ignore
+                        }
+                    }
                 }
             } catch (e) {
-                console.warn(`[Streameast] getStreamLinks: iframe fetch failed`, iframeUrl.slice(0, 60), e);
+                console.warn(`[Streameast] getStreamLinks: iframe fetch failed`, iframeUrl.slice(0, 70), e);
             }
         }
     }
