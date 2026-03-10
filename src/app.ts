@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import daddylive from "./routes/daddylive";
+import streameastRoutes from "./routes/streameast";
 import configRoute from "./routes/config";
 import scraperRoutes from "./routes/scraper";
 import statusRoute from "./routes/status";
@@ -49,6 +50,7 @@ async function startServer() {
     });
 
     await fastify.register(daddylive, { prefix: "/daddylive" });
+    await fastify.register(streameastRoutes, { prefix: "/streameast" });
     await fastify.register(configRoute);
     await fastify.register(scraperRoutes);
     const pkg = JSON.parse(
