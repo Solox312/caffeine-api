@@ -67,6 +67,19 @@ function extractStreamLinks(text: string, baseUrl: string): string[] {
     const livePathRe = /https?:\/\/[^\s"'<>)\]]+(?:\/live\/|\/stream\/|\/hls\/|\/dash\/)[^\s"'<>)\]]+/gi;
     for (const m of text.matchAll(livePathRe)) out.add(m[0].replace(/\\\//g, "/"));
 
+    // JS/JSON patterns: file:"...m3u8", sources:[{file:"..."}], url:"...m3u8"
+    const jsFileRe = /(?:file|src|url|source)\s*[:=]\s*["'](https?:\/\/[^"']*\.(?:m3u8|mpd)[^"']*)["']/gi;
+    for (const m of text.matchAll(jsFileRe)) {
+        if (m[1]) out.add(m[1].replace(/\\\//g, "/"));
+    }
+    const jsUnescapedRe = /(?:file|src|url|source)\s*[:=]\s*["'](https?:\\?\/\\?\/[^"']+\.(?:m3u8|mpd)[^"']*)["']/gi;
+    for (const m of text.matchAll(jsUnescapedRe)) {
+        if (m[1]) {
+            const u = m[1].replace(/\\\//g, "/").replace(/\\/g, "");
+            if (u.startsWith("http")) out.add(u);
+        }
+    }
+
     return Array.from(out).filter((u) => {
         try {
             const parsed = new URL(u);
@@ -77,19 +90,26 @@ function extractStreamLinks(text: string, baseUrl: string): string[] {
     });
 }
 
-/** Extract iframe src URLs from HTML */
+/** Extract iframe and embed-like URLs from HTML (iframe src, data-src, embed links) */
 function extractIframeSrcs(html: string, pageOrigin: string): string[] {
     const out = new Set<string>();
     const $ = load(html);
-    $("iframe[src]").each((_, el) => {
-        const src = $(el).attr("src");
-        if (!src || src.startsWith("javascript:") || src.startsWith("data:")) return;
+    const addUrl = (raw: string | undefined) => {
+        if (!raw || raw.startsWith("javascript:") || raw.startsWith("data:") || raw.length < 10) return;
         try {
-            const full = new URL(src, pageOrigin).href;
+            const full = new URL(raw, pageOrigin).href;
             if (full.startsWith("http")) out.add(full);
         } catch {
             // ignore
         }
+    };
+    $("iframe[src]").each((_, el) => addUrl($(el).attr("src")));
+    $("iframe[data-src]").each((_, el) => addUrl($(el).attr("data-src")));
+    $("[data-embed]").each((_, el) => addUrl($(el).attr("data-embed")));
+    $("[data-src]").each((_, el) => addUrl($(el).attr("data-src")));
+    $('a[href*="embed"], a[href*="player"]').each((_, el) => {
+        const href = $(el).attr("href");
+        if (href && (href.includes("/embed") || href.includes("/player"))) addUrl(href);
     });
     return Array.from(out);
 }
@@ -221,8 +241,8 @@ export async function getStreamLinks(eventUrl: string): Promise<{ url: string; l
 
     const iframeSrcs = extractIframeSrcs(html, resolved);
     if (iframeSrcs.length > 0) {
-        console.log(`[Streameast] getStreamLinks: found ${iframeSrcs.length} iframe(s), fetching up to 3`);
-        const toFetch = iframeSrcs.slice(0, 3);
+        console.log(`[Streameast] getStreamLinks: found ${iframeSrcs.length} embed/iframe(s), fetching up to 5`);
+        const toFetch = iframeSrcs.slice(0, 5);
         for (const iframeUrl of toFetch) {
             try {
                 const iframeHtml = await fetchWithTimeout(iframeUrl, {
