@@ -30,6 +30,7 @@ export interface LiveEvent {
     title: string;
     url: string;
     sport?: string;
+    logoUrl?: string;
 }
 
 /** Extract live stream URLs from HTML/JS (m3u8, mpd, stream paths) */
@@ -166,11 +167,21 @@ export async function getEvents(): Promise<{ baseUrl: string; events: LiveEvent[
                 if (seen.has(id)) return;
                 seen.add(id);
                 const title = $(el).text().trim() || `${sport} - ${slug.replace(/-/g, " ")}`;
+                let logoUrl: string | undefined;
+                const img = $(el).find("img").first().attr("src") ?? $(el).parent().find("img").first().attr("src");
+                if (img && !img.startsWith("data:")) {
+                    try {
+                        logoUrl = new URL(img, url).href;
+                    } catch {
+                        // ignore
+                    }
+                }
                 events.push({
                     id,
                     title: title.slice(0, 120),
                     url: fullUrl,
                     sport,
+                    logoUrl,
                 });
             });
 
