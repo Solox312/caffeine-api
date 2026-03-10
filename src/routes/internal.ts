@@ -107,9 +107,11 @@ export default async function internalRoutes(fastify: FastifyInstance) {
                 clearTimeout(timeout);
 
                 if (!response.ok) {
+                    const errMsg = `Upstream returned ${response.status} ${response.statusText}`;
+                    fastify.log.warn({ url: resolvedUrl, status: response.status }, "scrape-live-sources: upstream error");
                     return reply.status(502).send({
                         success: false,
-                        error: `Upstream returned ${response.status} ${response.statusText}`,
+                        error: errMsg,
                     });
                 }
 
@@ -133,6 +135,7 @@ export default async function internalRoutes(fastify: FastifyInstance) {
             } catch (err) {
                 clearTimeout(timeout);
                 const message = err instanceof Error ? err.message : "Unknown error";
+                fastify.log.warn({ err, url: resolvedUrl }, "scrape-live-sources: fetch failed");
                 if (message.includes("abort")) {
                     return reply.status(504).send({
                         success: false,
