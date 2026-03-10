@@ -5,11 +5,13 @@
 import type { Provider } from "../types";
 import { vidsrcProvider } from "./vidsrc";
 import { vixsrcProvider } from "./vixsrc";
+import { vidzeeProvider } from "./vidzee";
 
 export const providers: Record<string, Provider> = {
     vixsrc: vixsrcProvider,
     vidsrc: vidsrcProvider,
-    // Add more as you integrate: vidzee, uhdmovies, showbox, 4khdhub
+    vidzee: vidzeeProvider,
+    // Add more as you integrate: uhdmovies, showbox, 4khdhub
 };
 
 export function getProvider(providerId: string): Provider | undefined {
