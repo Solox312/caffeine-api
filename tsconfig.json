@@ -33,6 +33,19 @@
   "exclude": [
     "node_modules",
     "<node_internals>/**",
-    "bin/**"
+    "bin/**",
+    "src/models/functions.ts",
+    "src/utils/functions.ts",
+    "src/routes/goojara.ts",
+    "src/routes/insertunit.ts",
+    "src/routes/kissasian.ts",
+    "src/routes/nepu.ts",
+    "src/routes/primewire.ts",
+    "src/routes/ridomovies.ts",
+    "src/routes/showbox.ts",
+    "src/routes/superstream.ts",
+    "src/routes/vidsrc.ts",
+    "src/routes/vidsrcto.ts",
+    "src/routes/warezcdn.ts"
   ]
 }
