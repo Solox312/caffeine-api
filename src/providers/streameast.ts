@@ -133,15 +133,18 @@ function extractIframeSrcs(html: string, pageOrigin: string): string[] {
 
 /**
  * Headless browser fallback: capture m3u8/mpd from network responses and rendered DOM.
- * Use when plain fetch yields 0 links (JS-rendered content). Requires Playwright chromium.
- * Note: Vercel serverless has size limits; deploy to Railway/Render/Fly.io for browser support.
+ * Uses playwright-core + @sparticuz/chromium for Vercel/serverless (no native Chromium needed).
  */
 async function getStreamLinksWithBrowser(eventUrl: string, pageOrigin: string): Promise<string[]> {
-    let chromium: typeof import("playwright").chromium;
+    let playwrightChromium: typeof import("playwright-core").chromium;
+    let sparticuzChromium: { executablePath: () => Promise<string>; args: string[] };
     try {
-        chromium = (await import("playwright")).chromium;
-    } catch {
-        console.warn("[Streameast] Playwright not available, skipping browser fallback");
+        const pw = await import("playwright-core");
+        playwrightChromium = pw.chromium;
+        const sp = await import("@sparticuz/chromium");
+        sparticuzChromium = sp.default ?? sp;
+    } catch (e) {
+        console.warn("[Streameast] playwright-core/@sparticuz/chromium not available:", e);
         return [];
     }
 
@@ -151,17 +154,13 @@ async function getStreamLinksWithBrowser(eventUrl: string, pageOrigin: string): 
         if (u.startsWith("http") && isValidHttpUrl(u)) collected.add(u);
     };
 
-    let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
+    let browser: Awaited<ReturnType<typeof playwrightChromium.launch>> | null = null;
     try {
-        browser = await chromium.launch({
+        const executablePath = await sparticuzChromium.executablePath();
+        browser = await playwrightChromium.launch({
+            executablePath,
             headless: true,
-            args: [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--single-process",
-            ],
+            args: sparticuzChromium.args,
         });
         const context = await browser.newContext({
             userAgent: USER_AGENT,
