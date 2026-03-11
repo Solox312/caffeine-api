@@ -1,6 +1,7 @@
 /**
  * Live content provider for Streameast-style sites.
  * Lists events from the homepage and extracts m3u8/mpd stream links from event pages.
+ * Uses Playwright headless browser as fallback when plain fetch yields 0 links (JS-rendered content).
  * Set STREAMEAST_BASE_URL to a single URL or comma-separated mirrors (first that works is used).
  */
 import { load } from "cheerio";
@@ -128,6 +129,92 @@ function extractIframeSrcs(html: string, pageOrigin: string): string[] {
         if (m[1]) addUrl(m[1]);
     }
     return Array.from(out);
+}
+
+/**
+ * Headless browser fallback: capture m3u8/mpd from network responses and rendered DOM.
+ * Use when plain fetch yields 0 links (JS-rendered content). Requires Playwright chromium.
+ * Note: Vercel serverless has size limits; deploy to Railway/Render/Fly.io for browser support.
+ */
+async function getStreamLinksWithBrowser(eventUrl: string, pageOrigin: string): Promise<string[]> {
+    let chromium: typeof import("playwright").chromium;
+    try {
+        chromium = (await import("playwright")).chromium;
+    } catch {
+        console.warn("[Streameast] Playwright not available, skipping browser fallback");
+        return [];
+    }
+
+    const collected = new Set<string>();
+    const add = (raw: string) => {
+        const u = normalizeUrl(raw);
+        if (u.startsWith("http") && isValidHttpUrl(u)) collected.add(u);
+    };
+
+    let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
+    try {
+        browser = await chromium.launch({
+            headless: true,
+            args: [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--single-process",
+            ],
+        });
+        const context = await browser.newContext({
+            userAgent: USER_AGENT,
+            viewport: { width: 1280, height: 720 },
+            ignoreHTTPSErrors: true,
+        });
+        const page = await context.newPage();
+
+        // Capture m3u8/mpd URLs from network responses
+        page.on("response", (res) => {
+            const url = res.url();
+            if (/\.(m3u8|mpd)(\?|$)/i.test(url)) add(url);
+        });
+
+        console.log("[Streameast] getStreamLinksWithBrowser: navigating to", eventUrl.slice(0, 80));
+        await page.goto(eventUrl, {
+            waitUntil: "networkidle",
+            timeout: 20000,
+        });
+
+        // Wait a bit more for lazy-loaded players
+        await new Promise((r) => setTimeout(r, 3000));
+
+        const html = await page.content();
+        const domLinks = extractStreamLinks(html, pageOrigin);
+        domLinks.forEach(add);
+
+        const iframeSrcs = extractIframeSrcs(html, pageOrigin);
+        for (const iframeUrl of iframeSrcs.slice(0, 4)) {
+            try {
+                const iframePage = await context.newPage();
+                iframePage.on("response", (res) => {
+                    const url = res.url();
+                    if (/\.(m3u8|mpd)(\?|$)/i.test(url)) add(url);
+                });
+                await iframePage.goto(iframeUrl, { waitUntil: "domcontentloaded", timeout: 10000 });
+                await new Promise((r) => setTimeout(r, 2000));
+                const iframeHtml = await iframePage.content();
+                extractStreamLinks(iframeHtml, iframeUrl).forEach(add);
+                await iframePage.close();
+            } catch {
+                // ignore iframe fetch failures
+            }
+        }
+
+        console.log("[Streameast] getStreamLinksWithBrowser: collected", collected.size, "link(s)");
+        return Array.from(collected);
+    } catch (err) {
+        console.warn("[Streameast] getStreamLinksWithBrowser failed:", err instanceof Error ? err.message : err);
+        return Array.from(collected);
+    } finally {
+        if (browser) await browser.close().catch(() => {});
+    }
 }
 
 async function fetchWithTimeout(
@@ -293,8 +380,14 @@ export async function getStreamLinks(eventUrl: string): Promise<{ url: string; l
         }
     }
 
-    const links = Array.from(allLinks);
-    console.log(`[Streameast] getStreamLinks: total ${links.length} unique link(s)`);
+    let links = Array.from(allLinks);
+    if (links.length === 0) {
+        console.log("[Streameast] getStreamLinks: 0 links from fetch, trying headless browser fallback");
+        const browserLinks = await getStreamLinksWithBrowser(resolved, origin);
+        browserLinks.forEach((u) => allLinks.add(u));
+        links = Array.from(allLinks);
+        console.log(`[Streameast] getStreamLinks: browser fallback yielded ${links.length} total link(s)`);
+    }
     return { url: resolved, links };
 }
 
