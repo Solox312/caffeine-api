@@ -6,11 +6,23 @@
  */
 import { load } from "cheerio";
 
+// Official mirrors from https://gostreameast.is/ (updated Mar 2026)
 const DEFAULT_MIRRORS = [
-    "https://v2.streameast.ga",
-    "https://v2.streameast.ec",
-    "https://v2.streameast.to",
-    "https://streameast.games",
+    "https://streameast.games", // working in prod
+    "https://streameast.ga",
+    "https://streameast.cf",
+    "https://streameast.ch",
+    "https://streameast.ec",
+    "https://streameast.fi",
+    "https://streameast.ms",
+    "https://streameast.ph",
+    "https://streameast.ps",
+    "https://streameast.sg",
+    "https://streameast.sk",
+    "https://thestreameast.co",
+    "https://thestreameast.fun",
+    "https://thestreameast.ru",
+    "https://thestreameast.su",
 ];
 
 function getBaseUrls(): string[] {
@@ -24,7 +36,7 @@ function getBaseUrls(): string[] {
 const USER_AGENT =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-const DEFAULT_ORIGIN = "https://v2.streameast.ga";
+const DEFAULT_ORIGIN = "https://streameast.games";
 
 export interface LiveEvent {
     id: string;
