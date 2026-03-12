@@ -4,6 +4,7 @@
  * Uses Playwright headless browser as fallback when plain fetch yields 0 links (JS-rendered content).
  * Set STREAMEAST_BASE_URL to a single URL or comma-separated mirrors (first that works is used).
  */
+import { existsSync } from "fs";
 import { load } from "cheerio";
 
 // Official mirrors (streameast.games removed — not official). Use STREAMEAST_BASE_URL to override.
@@ -227,8 +228,12 @@ async function getStreamLinksWithBrowser(eventUrl: string, pageOrigin: string): 
     }
 }
 
-/** When WORKERS_URL is set, fetch via proxy to avoid 403/429/503 from mirrors blocking server IPs. */
+/** When WORKERS_URL is set, fetch via proxy so the connection to Streameast is not our server IP. */
 /** When WORKERS_URL is set, clientIp is passed to the worker so it spoofs X-Forwarded-For / X-Real-IP / True-Client-IP on the upstream request. */
+function hasWorkerProxy(): boolean {
+    return Boolean(process.env.WORKERS_URL?.trim());
+}
+
 function resolveFetchUrl(url: string, clientIp?: string | null): string {
     const workersUrl = process.env.WORKERS_URL?.trim();
     if (!workersUrl) return url;
@@ -290,7 +295,13 @@ function parseEventsFromHtml(html: string, baseUrl: string): LiveEvent[] {
         } catch {
             return;
         }
-        if (!fullUrl.startsWith(url)) return;
+        const baseOrigin = url.startsWith("http") ? new URL(url).origin : url;
+        if (!fullUrl.startsWith(baseOrigin)) {
+            const baseHost = new URL(baseOrigin + "/").hostname;
+            const fullHost = new URL(fullUrl).hostname;
+            const sameSite = fullHost === baseHost || fullHost.endsWith("." + baseHost);
+            if (!sameSite) return;
+        }
         const path = new URL(fullUrl).pathname.replace(/^\/+|\/+$/g, "");
         const parts = path.split("/").filter(Boolean);
         if (parts.length < 2) return;
@@ -324,8 +335,14 @@ function parseEventsFromHtml(html: string, baseUrl: string): LiveEvent[] {
     return events;
 }
 
+/** After a browser launch failure (e.g. ENOENT), skip browser fallback for this long to avoid repeated timeouts. */
+const BROWSER_UNAVAILABLE_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+let browserUnavailableUntil = 0;
+
 /** Try to load events list using headless browser (real Chrome UA, sometimes bypasses blocks). */
 async function getEventsWithBrowser(mirrorUrl: string): Promise<{ baseUrl: string; events: LiveEvent[] } | null> {
+    if (Date.now() < browserUnavailableUntil) return null;
+
     let playwrightChromium: typeof import("playwright-core").chromium;
     let sparticuzChromium: { executablePath: () => Promise<string>; args: string[] };
     try {
@@ -339,7 +356,16 @@ async function getEventsWithBrowser(mirrorUrl: string): Promise<{ baseUrl: strin
     const url = mirrorUrl.replace(/\/$/, "");
     let browser: Awaited<ReturnType<typeof playwrightChromium.launch>> | null = null;
     try {
-        const executablePath = await sparticuzChromium.executablePath();
+        let executablePath = await sparticuzChromium.executablePath();
+        if (!existsSync(executablePath) && process.platform === "win32") {
+            const withExe = executablePath + ".exe";
+            if (existsSync(withExe)) executablePath = withExe;
+        }
+        if (!existsSync(executablePath)) {
+            browserUnavailableUntil = Date.now() + BROWSER_UNAVAILABLE_COOLDOWN_MS;
+            console.warn("[Streameast] Chromium not found at", executablePath, "- skipping browser fallback for 5 min. Set WORKERS_URL or run: npx playwright install chromium");
+            return null;
+        }
         browser = await playwrightChromium.launch({
             executablePath,
             headless: true,
@@ -361,9 +387,12 @@ async function getEventsWithBrowser(mirrorUrl: string): Promise<{ baseUrl: strin
         return null;
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.warn("[Streameast] getEventsWithBrowser failed:", msg);
         if (/ENOENT|Failed to launch|chromium/i.test(msg)) {
-            console.warn("[Streameast] Hint: set WORKERS_URL in .env to proxy requests, or run: npx playwright install chromium");
+            browserUnavailableUntil = Date.now() + BROWSER_UNAVAILABLE_COOLDOWN_MS;
+            console.warn("[Streameast] getEventsWithBrowser failed:", msg);
+            console.warn("[Streameast] Skipping browser fallback for 5 min. Set WORKERS_URL or run: npx playwright install chromium");
+        } else {
+            console.warn("[Streameast] getEventsWithBrowser failed:", msg);
         }
         return null;
     } finally {
@@ -423,8 +452,12 @@ export interface GetEventsOptions {
 /**
  * Fetch homepage and parse event links. Tries up to 2 mirrors (ranked by recent success), then browser fallback.
  * Skips mirrors in cooldown. Successful mirrors are ranked first for later use.
+ * Refuses to connect to Streameast from server IP when WORKERS_URL is not set (connection must go via proxy or device).
  */
 export async function getEvents(opts: GetEventsOptions = {}): Promise<{ baseUrl: string; events: LiveEvent[] }> {
+    if (!hasWorkerProxy()) {
+        throw new Error("SERVER_CANNOT_FETCH_DIRECT: Set WORKERS_URL so the connection to Streameast is not from this server's IP, or use device fetch in the app.");
+    }
     const { clientIp } = opts;
     const toTry = getMirrorsToTry();
     let lastError: Error | null = null;
@@ -469,11 +502,15 @@ export interface GetStreamLinksOptions {
 /**
  * Fetch an event page and return extracted stream links. Also follows iframe embeds (one level).
  * Pass clientIp so the worker can set X-Forwarded-For when using WORKERS_URL.
+ * Refuses to connect to Streameast from server IP when WORKERS_URL is not set.
  */
 export async function getStreamLinks(
     eventUrl: string,
     opts: GetStreamLinksOptions = {}
 ): Promise<{ url: string; links: string[] }> {
+    if (!hasWorkerProxy()) {
+        throw new Error("SERVER_CANNOT_FETCH_DIRECT: Set WORKERS_URL so the connection to Streameast is not from this server's IP, or use device fetch in the app.");
+    }
     const { clientIp } = opts;
     let resolved: string;
     const mirrors = getBaseUrls();
@@ -552,6 +589,16 @@ export function getBaseUrl(): string {
 export function getMirrorUrlForClient(): string {
     const toTry = getMirrorsToTry();
     return toTry[0] ?? getBaseUrl();
+}
+
+/** Returns up to 3 mirror URLs for the client to try from the device (so on 429 it can try the next). */
+export function getMirrorsForClient(): string[] {
+    const all = getBaseUrls().map((u) => u.replace(/\/$/, ""));
+    const available = all.filter((u) => !skipMirrorIfRateLimited(u));
+    const preferred = preferredMirrors.filter((u) => available.includes(u));
+    const rest = available.filter((u) => !preferred.includes(u));
+    const ordered = [...preferred, ...rest];
+    return ordered.slice(0, 3);
 }
 
 /** Parse event links from Streameast homepage HTML. Exported for POST /streameast/events/parse (client sends HTML). */

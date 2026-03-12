@@ -7,7 +7,7 @@
  */
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import type Redis from "ioredis";
-import { getEvents, getStreamLinks, getBaseUrl, getMirrorUrlForClient, parseEventsFromHtmlPublic, parseStreamLinksFromHtml } from "../providers/streameast";
+import { getEvents, getStreamLinks, getBaseUrl, getMirrorUrlForClient, getMirrorsForClient, parseEventsFromHtmlPublic, parseStreamLinksFromHtml } from "../providers/streameast";
 import cache from "../utils/cache";
 import memoryCache from "../utils/memory-cache";
 
@@ -53,9 +53,12 @@ export default async function streameastRoutes(
     });
 
     /** Client fetches this URL from the user's device (user's IP), then POSTs HTML to /events/parse. */
-    fastify.get("/events/mirror", async (_request: FastifyRequest, reply: FastifyReply) => {
-        const url = getMirrorUrlForClient();
-        return reply.status(200).send({ url });
+    fastify.get("/events/mirror", async (request: FastifyRequest, reply: FastifyReply) => {
+        const clientIp = getClientIp(request);
+        if (clientIp) fastify.log.info({ clientIp }, "streameast/events/mirror: request from IP");
+        const mirrors = getMirrorsForClient();
+        const url = mirrors[0] ?? getMirrorUrlForClient();
+        return reply.status(200).send({ url, mirrors, ...(clientIp && { client_ip: clientIp }) });
     });
 
     /** Parse events from HTML that the client fetched from the mirror (user's IP). Body: { html: string, base_url: string }. */
@@ -71,6 +74,8 @@ export default async function streameastRoutes(
             if (!baseUrl) {
                 return reply.status(400).send({ success: false, error: "Missing or invalid body.base_url" });
             }
+            const clientIp = getClientIp(request);
+            if (clientIp) fastify.log.info({ clientIp }, "streameast/events/parse: HTML from IP");
             try {
                 const events = parseEventsFromHtmlPublic(html, baseUrl);
                 return reply.status(200).send({ success: true, base_url: baseUrl.replace(/\/$/, ""), events });
@@ -99,6 +104,15 @@ export default async function streameastRoutes(
             });
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
+            if (msg.includes("SERVER_CANNOT_FETCH_DIRECT")) {
+                fastify.log.warn("streameast/events: WORKERS_URL not set, refusing to connect from server IP");
+                return reply.status(503).send({
+                    success: false,
+                    error: "Server does not connect to Streameast from its own IP.",
+                    code: "USE_DEVICE_OR_WORKERS",
+                    hint: "Use the app (device fetch uses your IP), or set WORKERS_URL on the server.",
+                });
+            }
             const is429 = /429|1015|rate limit/i.test(msg);
             const stale = redis
                 ? await cache.get<{ baseUrl: string; events: unknown[] }>(redis, EVENTS_CACHE_KEY)
@@ -115,7 +129,7 @@ export default async function streameastRoutes(
             return reply.status(is429 ? 429 : 502).send({
                 success: false,
                 error: msg,
-                ...(is429 && { code: "RATE_LIMITED" }),
+                ...(is429 && { code: "RATE_LIMITED", hint: "Stream is busy. Try again in a few minutes or try another network (e.g. Wi‑Fi)." }),
             });
         }
     });
@@ -133,6 +147,8 @@ export default async function streameastRoutes(
             if (!pageUrl) {
                 return reply.status(400).send({ success: false, error: "Missing or invalid body.url" });
             }
+            const clientIp = getClientIp(request);
+            if (clientIp) fastify.log.info({ clientIp }, "streameast/stream/parse: HTML from IP");
             try {
                 const result = parseStreamLinksFromHtml(html, pageUrl);
                 return reply.status(200).send({
@@ -179,6 +195,15 @@ export default async function streameastRoutes(
                 });
             } catch (err) {
                 const message = err instanceof Error ? err.message : "Failed to fetch stream links";
+                if (message.includes("SERVER_CANNOT_FETCH_DIRECT")) {
+                    fastify.log.warn("streameast/stream: WORKERS_URL not set, refusing to connect from server IP");
+                    return reply.status(503).send({
+                        success: false,
+                        error: "Server does not connect to Streameast from its own IP.",
+                        code: "USE_DEVICE_OR_WORKERS",
+                        hint: "Use the app (device fetch uses your IP), or set WORKERS_URL on the server.",
+                    });
+                }
                 const is429 = /429|1015|rate limit/i.test(message);
                 const stale = redis
                     ? await cache.get<{ url: string; links: string[] }>(redis, streamCacheKey)
