@@ -17,7 +17,7 @@ TYPE="${1:-api}"
 for arg in "$@"; do
   case "$arg" in
     -f|--follow) FOLLOW="-f" ;;
-    nginx-access|nginx-error|api|all) TYPE="$arg ;;
+    nginx-access|nginx-error|api|all) TYPE="$arg" ;;
   esac
 done
 
@@ -67,17 +67,17 @@ case "$TYPE" in
   *)
     echo "Usage: $0 [nginx-access|nginx-error|api|all] [-f|--follow]"
     echo ""
-    echo "  nginx-access   Nginx access log (requests)"
+    echo "  nginx-access   Nginx access log - requests"
     echo "  nginx-error    Nginx error log"
-    echo "  api            Caffeine API container logs (Docker)"
-    echo "  all            Last 50 lines of each (no -f)"
+    echo "  api            Caffeine API container logs - Docker"
+    echo "  all            Last 50 lines of each - no -f"
     echo ""
-    echo "  -f, --follow   Keep streaming (tail -f). Use with one of the first four options."
+    echo "  -f, --follow   Keep streaming. Use with one of the first four options."
     echo ""
     echo "Examples:"
-    echo "  $0 api -f           # Follow API logs"
-    echo "  $0 nginx-error -f  # Follow Nginx errors"
-    echo "  $0 all             # Snapshot of all logs"
+    echo "  $0 api -f"
+    echo "  $0 nginx-error -f"
+    echo "  $0 all"
     exit 1
     ;;
 esac

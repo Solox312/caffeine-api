@@ -78,24 +78,50 @@ Set these in `.env` or your deployment config:
 
 ## Reverse Proxy (Nginx)
 
-For HTTPS and a domain:
+For HTTPS and a domain, proxy **all** paths to the API so `/vidsrc/stream-movie`, `/vixsrc/stream-movie`, `/config`, `/status`, etc. work:
 
 ```nginx
 server {
     listen 80;
-    server_name api.yourdomain.com;
+    server_name caffeine.synqholdings.com;   # or your domain
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
 
-Use Certbot for SSL: `sudo certbot --nginx -d api.yourdomain.com`
+- Use **one** `location /` block that proxies to `http://127.0.0.1:3000`. Do not add more specific `location /status` or `location /config` only, or paths like `/vidsrc/` will not be proxied and will 404.
+- Use Certbot for SSL: `sudo certbot --nginx -d caffeine.synqholdings.com`
+- Reload Nginx after edits: `sudo nginx -t && sudo systemctl reload nginx`
+
+## Troubleshooting: "Can't pull up any content" / 404 on stream-movie
+
+If the app gets **404** on `/vixsrc/stream-movie`, `/vidsrc/stream-movie`, etc.:
+
+1. **Nginx must proxy everything to the API**  
+   Ensure you have a single `location / { proxy_pass http://127.0.0.1:3000; ... }` with no other `location` blocks that take precedence for these paths.
+
+2. **Rebuild and restart the API on EC2**  
+   The running image might be old and missing the scraper routes:
+   ```bash
+   cd caffeine-api
+   ./scripts/restart-aws.sh --pull
+   ```
+
+3. **Test the API directly on the server**  
+   ```bash
+   curl -s "http://127.0.0.1:3000/vidsrc/stream-movie?tmdbId=550"
+   ```
+   - If this returns JSON (with `success` and links or an error from the provider), the API is correct; the issue is Nginx or the app URL.
+   - If this returns `{"error":"page not found"}`, the API build does not have the scraper or it failed to load; rebuild with `./scripts/restart-aws.sh`.
+
+4. **Supported scraper providers**  
+   The API currently exposes these providers for movies/TV: **vixsrc**, **vidsrc**, **vidzee**. Requests to **pstream** or **showbox** are not implemented in this build and will return 404 until those providers are added. The app may try multiple providers; vixsrc and vidsrc should work once Nginx and the API are correct.
 
 ## Dockerfile.aws
 
