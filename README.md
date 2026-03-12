@@ -1,7 +1,7 @@
 <p align="center">
     <img alt="Consumet" src="https://github.com/Webcap/webcap.github.io/blob/trunk/caffiene/res/assets/images/logo.png?raw=true" width="200">
 </p>
-<h1 align="center">FlixQuest API</h1>
+<h1 align="center">Caffeine API</h1>
 
 <p align="center">REST API that fetches streaming links of movies and TV shows based on TMDB id using @movie-web/providers package</p>
 
