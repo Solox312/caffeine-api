@@ -56,13 +56,13 @@ case "$TYPE" in
     fi
     ;;
   all)
-    echo "=== Last 50 lines each (use -f with nginx-access, nginx-error, or api for live tail) ==="
+    echo "=== Last 50 lines each - use -f with nginx-access, nginx-error, or api for live tail ==="
     echo "--- Nginx access ---"
-    sudo tail -n 50 "$NGINX_ACCESS" 2>/dev/null || echo "(no access log)"
+    sudo tail -n 50 "$NGINX_ACCESS" 2>/dev/null || echo "no access log"
     echo "--- Nginx error ---"
-    sudo tail -n 50 "$NGINX_ERROR" 2>/dev/null || echo "(no error log)"
-    echo "--- API (Docker) ---"
-    docker logs --tail 50 "$CONTAINER_NAME" 2>/dev/null || echo "(container not running)"
+    sudo tail -n 50 "$NGINX_ERROR" 2>/dev/null || echo "no error log"
+    echo "--- API Docker ---"
+    docker logs --tail 50 "$CONTAINER_NAME" 2>/dev/null || echo "container not running"
     ;;
   *)
     echo "Usage: $0 [nginx-access|nginx-error|api|all] [-f|--follow]"
