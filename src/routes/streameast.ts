@@ -55,9 +55,12 @@ export default async function streameastRoutes(fastify: FastifyInstance) {
                 });
             } catch (err) {
                 fastify.log.warn(err, "streameast/stream failed");
-                return reply.status(502).send({
+                const message = err instanceof Error ? err.message : "Failed to fetch stream links";
+                const is429 = typeof message === "string" && message.includes("429");
+                return reply.status(is429 ? 429 : 502).send({
                     success: false,
-                    error: err instanceof Error ? err.message : "Failed to fetch stream links",
+                    error: message,
+                    ...(is429 && { code: "RATE_LIMITED" }),
                 });
             }
         }
