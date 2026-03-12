@@ -13,6 +13,14 @@ const DEFAULT_HEADERS: Record<string, string> = {
     Connection: "keep-alive",
 };
 
+/** When WORKERS_URL is set, fetch via proxy to avoid 403 from provider blocking server IPs. */
+function resolveFetchUrl(url: string): string {
+    const workersUrl = process.env.WORKERS_URL?.trim();
+    if (!workersUrl) return url;
+    const sep = workersUrl.includes("?") ? "&" : "?";
+    return `${workersUrl}${sep}url=${encodeURIComponent(url)}`;
+}
+
 async function makeRequest(
     url: string,
     options: RequestInit = {}
@@ -21,9 +29,10 @@ async function makeRequest(
         ...DEFAULT_HEADERS,
         ...(options.headers as Record<string, string>),
     };
+    const fetchUrl = resolveFetchUrl(url);
 
     try {
-        const response = await fetch(url, {
+        const response = await fetch(fetchUrl, {
             method: options.method || "GET",
             headers,
             ...options,

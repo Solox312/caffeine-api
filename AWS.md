@@ -71,7 +71,7 @@ Set these in `.env` or your deployment config:
 |----------|----------|-------------|
 | `TMDB_KEY` | Yes | TMDB API key |
 | `CAFFEINE_API_URL` | Yes | Public URL of this API (used by Flutter app) |
-| `WORKERS_URL` | No | Proxy URL for provider requests |
+| `WORKERS_URL` | No | **Recommended on AWS.** Proxy URL so vidsrc/vixsrc requests are sent from the proxy IP instead of the server (avoids 403 from providers blocking datacenter IPs). Proxy must accept `GET ?url=ENCODED_TARGET` and return the fetched body. |
 | `REDIS_HOST` | No | Redis host (cache) |
 | `SUPABASE_URL` | No | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | No | Supabase service role key |
@@ -122,6 +122,9 @@ If the app gets **404** on `/vixsrc/stream-movie`, `/vidsrc/stream-movie`, etc.:
 
 4. **Supported scraper providers**  
    The API currently exposes these providers for movies/TV: **vixsrc**, **vidsrc**, **vidzee**. Requests to **pstream** or **showbox** are not implemented in this build and will return 404 until those providers are added. The app may try multiple providers; vixsrc and vidsrc should work once Nginx and the API are correct.
+
+5. **403 Forbidden from vidsrc / vixsrc**  
+   If logs show `HTTP 403: Forbidden` when the API fetches vidsrc.xyz or vixsrc.to, the provider is blocking the server’s IP (common for AWS/datacenter IPs). Set **`WORKERS_URL`** in `.env` to a proxy that fetches the target URL from its own IP (e.g. a Cloudflare Worker or CORS proxy). The API will send requests as `GET WORKERS_URL?url=ENCODED_TARGET`. Example Worker: receive `url` query param, fetch that URL, return the response. Then restart the API: `./scripts/restart-aws.sh`.
 
 ## Dockerfile.aws
 
