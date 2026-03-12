@@ -305,7 +305,14 @@ function parseEventsFromHtml(html: string, baseUrl: string): LiveEvent[] {
         const path = new URL(fullUrl).pathname.replace(/^\/+|\/+$/g, "");
         const parts = path.split("/").filter(Boolean);
         if (parts.length < 2) return;
-        const [sport, ...rest] = parts;
+        let sport: string;
+        let rest: string[];
+        if (parts.length >= 3 && parts[0].toLowerCase() === "live") {
+            sport = parts[1];
+            rest = parts.slice(2);
+        } else {
+            [sport, ...rest] = parts;
+        }
         const sportLower = sport.toLowerCase();
         if (!/^[a-z]{2,15}$/.test(sportLower)) return;
         if (NON_EVENT_SEGMENTS.has(sportLower)) return;
