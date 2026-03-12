@@ -227,15 +227,24 @@ async function getStreamLinksWithBrowser(eventUrl: string, pageOrigin: string): 
     }
 }
 
+/** When WORKERS_URL is set, fetch via proxy to avoid 403/429/503 from mirrors blocking server IPs. */
+function resolveFetchUrl(url: string): string {
+    const workersUrl = process.env.WORKERS_URL?.trim();
+    if (!workersUrl) return url;
+    const sep = workersUrl.includes("?") ? "&" : "?";
+    return `${workersUrl}${sep}url=${encodeURIComponent(url)}`;
+}
+
 async function fetchWithTimeout(
     url: string,
     opts: { referrer?: string; timeoutMs?: number } = {}
 ): Promise<string> {
     const { referrer, timeoutMs = 12000 } = opts;
+    const fetchUrl = resolveFetchUrl(url);
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), timeoutMs);
     try {
-        const res = await fetch(url, {
+        const res = await fetch(fetchUrl, {
             method: "GET",
             headers: {
                 "User-Agent": USER_AGENT,
