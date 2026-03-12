@@ -263,8 +263,106 @@ async function fetchWithTimeout(
     }
 }
 
+const NON_EVENT_SEGMENTS = new Set([
+    "leagues", "league", "sports", "category", "categories", "live", "premium", "multi",
+    "updates", "search", "login", "register", "account", "contact", "about", "terms",
+]);
+
+/** Parse event links from Streameast homepage HTML. */
+function parseEventsFromHtml(html: string, baseUrl: string): LiveEvent[] {
+    const $ = load(html);
+    const events: LiveEvent[] = [];
+    const seen = new Set<string>();
+    const url = baseUrl.replace(/\/$/, "");
+    $("a[href]").each((_, el) => {
+        const href = $(el).attr("href");
+        if (!href || href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("mailto:"))
+            return;
+        let fullUrl: string;
+        try {
+            fullUrl = new URL(href, url).href;
+        } catch {
+            return;
+        }
+        if (!fullUrl.startsWith(url)) return;
+        const path = new URL(fullUrl).pathname.replace(/^\/+|\/+$/g, "");
+        const parts = path.split("/").filter(Boolean);
+        if (parts.length < 2) return;
+        const [sport, ...rest] = parts;
+        const sportLower = sport.toLowerCase();
+        if (!/^[a-z]{2,15}$/.test(sportLower)) return;
+        if (NON_EVENT_SEGMENTS.has(sportLower)) return;
+        const slug = rest.join("/");
+        if (!slug || slug.length < 2) return;
+        const id = `${sport}-${slug}`;
+        if (seen.has(id)) return;
+        seen.add(id);
+        const title = $(el).text().trim() || `${sport} - ${slug.replace(/-/g, " ")}`;
+        let logoUrl: string | undefined;
+        const img = $(el).find("img").first().attr("src") ?? $(el).parent().find("img").first().attr("src");
+        if (img && !img.startsWith("data:")) {
+            try {
+                logoUrl = new URL(img, url).href;
+            } catch {
+                // ignore
+            }
+        }
+        events.push({
+            id,
+            title: title.slice(0, 120),
+            url: fullUrl,
+            sport,
+            logoUrl,
+        });
+    });
+    return events;
+}
+
+/** Try to load events list using headless browser (real Chrome UA, sometimes bypasses blocks). */
+async function getEventsWithBrowser(mirrorUrl: string): Promise<{ baseUrl: string; events: LiveEvent[] } | null> {
+    let playwrightChromium: typeof import("playwright-core").chromium;
+    let sparticuzChromium: { executablePath: () => Promise<string>; args: string[] };
+    try {
+        const pw = await import("playwright-core");
+        playwrightChromium = pw.chromium;
+        const sp = await import("@sparticuz/chromium");
+        sparticuzChromium = sp.default ?? sp;
+    } catch {
+        return null;
+    }
+    const url = mirrorUrl.replace(/\/$/, "");
+    let browser: Awaited<ReturnType<typeof playwrightChromium.launch>> | null = null;
+    try {
+        const executablePath = await sparticuzChromium.executablePath();
+        browser = await playwrightChromium.launch({
+            executablePath,
+            headless: true,
+            args: sparticuzChromium.args,
+        });
+        const context = await browser.newContext({
+            userAgent: USER_AGENT,
+            viewport: { width: 1280, height: 720 },
+            ignoreHTTPSErrors: true,
+        });
+        const page = await context.newPage();
+        console.log("[Streameast] getEventsWithBrowser: loading", url);
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 25000 });
+        await new Promise((r) => setTimeout(r, 3000));
+        const html = await page.content();
+        const events = parseEventsFromHtml(html, url);
+        console.log("[Streameast] getEventsWithBrowser: got", events.length, "events");
+        if (events.length > 0) return { baseUrl: url, events };
+        return null;
+    } catch (err) {
+        console.warn("[Streameast] getEventsWithBrowser failed:", err instanceof Error ? err.message : err);
+        return null;
+    } finally {
+        if (browser) await browser.close().catch(() => {});
+    }
+}
+
 /**
- * Fetch homepage and parse event links. Tries each mirror until one returns events.
+ * Fetch homepage and parse event links. Tries each mirror (fetch), then browser fallback on first mirror.
  */
 export async function getEvents(): Promise<{ baseUrl: string; events: LiveEvent[] }> {
     const mirrors = getBaseUrls();
@@ -275,58 +373,7 @@ export async function getEvents(): Promise<{ baseUrl: string; events: LiveEvent[
         try {
             console.log(`[Streameast] getEvents: trying ${url}`);
             const html = await fetchWithTimeout(url);
-            const $ = load(html);
-            const events: LiveEvent[] = [];
-            const seen = new Set<string>();
-
-            // Path segments that are league/category index pages, not individual events (no stream links on those pages)
-            const nonEventSegments = new Set([
-                "leagues", "league", "sports", "category", "categories", "live", "premium", "multi",
-                "updates", "search", "login", "register", "account", "contact", "about", "terms",
-            ]);
-            // Accept path like /sport/slug where sport looks like a sport and slug is an event (e.g. team-vs-team)
-            $("a[href]").each((_, el) => {
-                const href = $(el).attr("href");
-                if (!href || href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("mailto:"))
-                    return;
-                let fullUrl: string;
-                try {
-                    fullUrl = new URL(href, url).href;
-                } catch {
-                    return;
-                }
-                if (!fullUrl.startsWith(url)) return;
-                const path = new URL(fullUrl).pathname.replace(/^\/+|\/+$/g, "");
-                const parts = path.split("/").filter(Boolean);
-                if (parts.length < 2) return;
-                const [sport, ...rest] = parts;
-                const sportLower = sport.toLowerCase();
-                if (!/^[a-z]{2,15}$/.test(sportLower)) return;
-                if (nonEventSegments.has(sportLower)) return;
-                const slug = rest.join("/");
-                if (!slug || slug.length < 2) return;
-                const id = `${sport}-${slug}`;
-                if (seen.has(id)) return;
-                seen.add(id);
-                const title = $(el).text().trim() || `${sport} - ${slug.replace(/-/g, " ")}`;
-                let logoUrl: string | undefined;
-                const img = $(el).find("img").first().attr("src") ?? $(el).parent().find("img").first().attr("src");
-                if (img && !img.startsWith("data:")) {
-                    try {
-                        logoUrl = new URL(img, url).href;
-                    } catch {
-                        // ignore
-                    }
-                }
-                events.push({
-                    id,
-                    title: title.slice(0, 120),
-                    url: fullUrl,
-                    sport,
-                    logoUrl,
-                });
-            });
-
+            const events = parseEventsFromHtml(html, url);
             console.log(`[Streameast] getEvents: ${url} returned ${events.length} events`);
             if (events.length > 0) {
                 return { baseUrl: url, events };
@@ -335,6 +382,14 @@ export async function getEvents(): Promise<{ baseUrl: string; events: LiveEvent[
             lastError = err instanceof Error ? err : new Error(String(err));
             console.warn(`[Streameast] getEvents: ${url} failed`, lastError.message);
         }
+    }
+
+    // Fallback: try first mirror with headless browser (real Chrome, sometimes bypasses 403/503)
+    console.log("[Streameast] getEvents: all fetch failed, trying browser fallback");
+    const first = mirrors[0]?.replace(/\/$/, "");
+    if (first) {
+        const result = await getEventsWithBrowser(first);
+        if (result && result.events.length > 0) return result;
     }
 
     throw lastError || new Error("All mirrors failed");
