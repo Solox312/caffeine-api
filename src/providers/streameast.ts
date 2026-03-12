@@ -6,9 +6,8 @@
  */
 import { load } from "cheerio";
 
-// Official mirrors from https://gostreameast.is/ (updated Mar 2026)
+// Official mirrors (streameast.games removed — not official). Use STREAMEAST_BASE_URL to override.
 const DEFAULT_MIRRORS = [
-    "https://streameast.games", // working in prod
     "https://streameast.ga",
     "https://streameast.cf",
     "https://streameast.ch",
@@ -36,7 +35,7 @@ function getBaseUrls(): string[] {
 const USER_AGENT =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-const DEFAULT_ORIGIN = "https://streameast.games";
+const DEFAULT_ORIGIN = "https://streameast.ga";
 
 export interface LiveEvent {
     id: string;
