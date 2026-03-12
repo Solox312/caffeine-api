@@ -1,5 +1,18 @@
 # Caffeine API – Scripts
 
+## `logs-aws.sh`
+
+Quick access to Nginx and API logs on EC2. See **[LOGS.md](LOGS.md)** for full details.
+
+```bash
+chmod +x scripts/logs-aws.sh
+./scripts/logs-aws.sh api -f          # Follow API (Docker) logs
+./scripts/logs-aws.sh nginx-error -f  # Follow Nginx error log
+./scripts/logs-aws.sh all             # Last 50 lines of each
+```
+
+---
+
 ## `restart-aws.sh`
 
 Restarts the Caffeine API on AWS (EC2 or any Linux host) by rebuilding the Docker image and running the container. Use this after code changes or a `git pull` so the running app uses the latest code.
@@ -34,10 +47,11 @@ Or from anywhere:
 ### What it does
 
 1. **Optional** – If `--pull` is passed, runs `git pull` in the repo.
-2. **Check** – Warns if `.env` is missing (and asks to continue or exit).
-3. **Build** – `docker build -f Dockerfile.aws -t caffeine-api:aws .`
-4. **Stop** – Stops and removes the existing container named `caffeine-api` (if present).
-5. **Run** – Starts a new container with:
+2. **Optional** – If `--cloudwatch` is passed, API logs are sent to CloudWatch (see [CLOUDWATCH.md](CLOUDWATCH.md)).
+3. **Check** – Warns if `.env` is missing (and asks to continue or exit).
+4. **Build** – `docker build -f Dockerfile.aws -t caffeine-api:aws .`
+5. **Stop** – Stops and removes the existing container named `caffeine-api` (if present).
+6. **Run** – Starts a new container with:
    - Name: `caffeine-api`
    - Restart: `unless-stopped`
    - Env: `--env-file .env`
@@ -55,9 +69,17 @@ Edit the variables at the top of `restart-aws.sh` if you use different names or 
 
 ### After restart
 
-- **Logs:** `docker logs -f caffeine-api`
+- **Logs:** `docker logs -f caffeine-api` (or use CloudWatch; see [CLOUDWATCH.md](CLOUDWATCH.md))
 - **Status:** `docker ps` (look for `caffeine-api`)
 - **Health:** `curl http://localhost:3000/status` (or your server URL)
+
+### CloudWatch (logs in AWS Console)
+
+To send Nginx and API logs to CloudWatch so you can view them without SSH, see **[CLOUDWATCH.md](CLOUDWATCH.md)**. Then run:
+
+```bash
+./scripts/restart-aws.sh --cloudwatch   # API logs → CloudWatch
+```
 
 ### Troubleshooting
 
