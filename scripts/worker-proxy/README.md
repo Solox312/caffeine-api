@@ -71,6 +71,10 @@ Replace with your actual Worker URL. Then restart the API:
 
 After that, vidsrc/vixsrc requests from the API go through the Worker, so the streaming sites see Cloudflare’s IP instead of AWS and should stop returning 403.
 
+## Optional: client IP forwarding (Streameast / live)
+
+When the API calls the Worker with an optional `client_ip` query param (e.g. `?url=...&client_ip=1.2.3.4`), the Worker sets `X-Forwarded-For` and `X-Real-IP` on the outgoing request. Upstreams that respect those headers may rate-limit by the user's IP. The API sends the app user's IP (from your reverse proxy) when fetching Streameast. Use the full `worker.js` from this repo so the Worker supports `client_ip`.
+
 ## Optional: use your own domain
 
 In **Workers & Pages** → your Worker → **Triggers** → **Custom Domains**, you can add a domain (e.g. `proxy.yourdomain.com`) and use that as `WORKERS_URL` instead of `*.workers.dev`.

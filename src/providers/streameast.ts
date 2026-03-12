@@ -228,19 +228,25 @@ async function getStreamLinksWithBrowser(eventUrl: string, pageOrigin: string): 
 }
 
 /** When WORKERS_URL is set, fetch via proxy to avoid 403/429/503 from mirrors blocking server IPs. */
-function resolveFetchUrl(url: string): string {
+/** When WORKERS_URL is set, clientIp is passed to the worker so it spoofs X-Forwarded-For / X-Real-IP / True-Client-IP on the upstream request. */
+function resolveFetchUrl(url: string, clientIp?: string | null): string {
     const workersUrl = process.env.WORKERS_URL?.trim();
     if (!workersUrl) return url;
     const sep = workersUrl.includes("?") ? "&" : "?";
-    return `${workersUrl}${sep}url=${encodeURIComponent(url)}`;
+    let out = `${workersUrl}${sep}url=${encodeURIComponent(url)}`;
+    if (clientIp && /^[\d.a-f:]+$/i.test(clientIp)) {
+        out += `&client_ip=${encodeURIComponent(clientIp)}`;
+        console.log("[Streameast] Using client IP for upstream request (spoofed in headers)");
+    }
+    return out;
 }
 
 async function fetchWithTimeout(
     url: string,
-    opts: { referrer?: string; timeoutMs?: number } = {}
+    opts: { referrer?: string; timeoutMs?: number; clientIp?: string | null } = {}
 ): Promise<string> {
-    const { referrer, timeoutMs = 12000 } = opts;
-    const fetchUrl = resolveFetchUrl(url);
+    const { referrer, timeoutMs = 12000, clientIp } = opts;
+    const fetchUrl = resolveFetchUrl(url, clientIp);
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -354,51 +360,121 @@ async function getEventsWithBrowser(mirrorUrl: string): Promise<{ baseUrl: strin
         if (events.length > 0) return { baseUrl: url, events };
         return null;
     } catch (err) {
-        console.warn("[Streameast] getEventsWithBrowser failed:", err instanceof Error ? err.message : err);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn("[Streameast] getEventsWithBrowser failed:", msg);
+        if (/ENOENT|Failed to launch|chromium/i.test(msg)) {
+            console.warn("[Streameast] Hint: set WORKERS_URL in .env to proxy requests, or run: npx playwright install chromium");
+        }
         return null;
     } finally {
         if (browser) await browser.close().catch(() => {});
     }
 }
 
+/** Cooldown (ms) for mirrors that returned 429/1015 so we don't hammer them. */
+const MIRROR_RATE_LIMIT_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+const mirrorRateLimitUntil = new Map<string, number>();
+
+function isRateLimited(msg: string): boolean {
+    return /429|1015|530|rate limit/i.test(msg);
+}
+
+function skipMirrorIfRateLimited(url: string): boolean {
+    const until = mirrorRateLimitUntil.get(url);
+    if (until && Date.now() < until) return true;
+    return false;
+}
+
+function setMirrorRateLimited(url: string): void {
+    mirrorRateLimitUntil.set(url, Date.now() + MIRROR_RATE_LIMIT_COOLDOWN_MS);
+}
+
+/** Delay between mirror attempts to avoid bursting requests. */
+const DELAY_BETWEEN_MIRRORS_MS = 2500;
+
+/** Only try this many mirrors per request before browser fallback. */
+const MAX_MIRRORS_TO_TRY = 2;
+
+/** Recently successful mirrors (ranked first on next run). Max size. */
+const PREFERRED_MIRRORS_MAX = 3;
+const preferredMirrors: string[] = [];
+
+function addPreferredMirror(url: string): void {
+    const normalized = url.replace(/\/$/, "");
+    const next = [normalized, ...preferredMirrors.filter((u) => u !== normalized)].slice(0, PREFERRED_MIRRORS_MAX);
+    preferredMirrors.length = 0;
+    preferredMirrors.push(...next);
+}
+
+/** Build list of mirrors to try: preferred (ranked) first, then rest, up to MAX_MIRRORS_TO_TRY. Skips cooldown. */
+function getMirrorsToTry(): string[] {
+    const all = getBaseUrls().map((u) => u.replace(/\/$/, ""));
+    const available = all.filter((u) => !skipMirrorIfRateLimited(u));
+    const preferred = preferredMirrors.filter((u) => available.includes(u));
+    const rest = available.filter((u) => !preferred.includes(u));
+    const ordered = [...preferred, ...rest];
+    return ordered.slice(0, MAX_MIRRORS_TO_TRY);
+}
+
+export interface GetEventsOptions {
+    clientIp?: string | null;
+}
+
 /**
- * Fetch homepage and parse event links. Tries each mirror (fetch), then browser fallback on first mirror.
+ * Fetch homepage and parse event links. Tries up to 2 mirrors (ranked by recent success), then browser fallback.
+ * Skips mirrors in cooldown. Successful mirrors are ranked first for later use.
  */
-export async function getEvents(): Promise<{ baseUrl: string; events: LiveEvent[] }> {
-    const mirrors = getBaseUrls();
+export async function getEvents(opts: GetEventsOptions = {}): Promise<{ baseUrl: string; events: LiveEvent[] }> {
+    const { clientIp } = opts;
+    const toTry = getMirrorsToTry();
     let lastError: Error | null = null;
 
-    for (const baseUrl of mirrors) {
+    for (const baseUrl of toTry) {
         const url = baseUrl.replace(/\/$/, "");
         try {
             console.log(`[Streameast] getEvents: trying ${url}`);
-            const html = await fetchWithTimeout(url);
+            const html = await fetchWithTimeout(url, { clientIp });
             const events = parseEventsFromHtml(html, url);
             console.log(`[Streameast] getEvents: ${url} returned ${events.length} events`);
             if (events.length > 0) {
+                addPreferredMirror(url);
                 return { baseUrl: url, events };
             }
         } catch (err) {
             lastError = err instanceof Error ? err : new Error(String(err));
             console.warn(`[Streameast] getEvents: ${url} failed`, lastError.message);
+            if (isRateLimited(lastError.message)) setMirrorRateLimited(url);
+            await new Promise((r) => setTimeout(r, DELAY_BETWEEN_MIRRORS_MS));
         }
     }
 
-    // Fallback: try first mirror with headless browser (real Chrome, sometimes bypasses 403/503)
+    // Fallback: try first preferred or first from full list with headless browser
+    const first = toTry[0] ?? getBaseUrls()[0]?.replace(/\/$/, "");
     console.log("[Streameast] getEvents: all fetch failed, trying browser fallback");
-    const first = mirrors[0]?.replace(/\/$/, "");
     if (first) {
         const result = await getEventsWithBrowser(first);
-        if (result && result.events.length > 0) return result;
+        if (result && result.events.length > 0) {
+            addPreferredMirror(result.baseUrl);
+            return result;
+        }
     }
 
     throw lastError || new Error("All mirrors failed");
 }
 
+export interface GetStreamLinksOptions {
+    clientIp?: string | null;
+}
+
 /**
  * Fetch an event page and return extracted stream links. Also follows iframe embeds (one level).
+ * Pass clientIp so the worker can set X-Forwarded-For when using WORKERS_URL.
  */
-export async function getStreamLinks(eventUrl: string): Promise<{ url: string; links: string[] }> {
+export async function getStreamLinks(
+    eventUrl: string,
+    opts: GetStreamLinksOptions = {}
+): Promise<{ url: string; links: string[] }> {
+    const { clientIp } = opts;
     let resolved: string;
     const mirrors = getBaseUrls();
     const origin = mirrors[0]?.replace(/\/$/, "") || DEFAULT_ORIGIN;
@@ -409,7 +485,7 @@ export async function getStreamLinks(eventUrl: string): Promise<{ url: string; l
     }
 
     console.log(`[Streameast] getStreamLinks: fetching ${resolved}`);
-    const html = await fetchWithTimeout(resolved, { referrer: origin + "/", timeoutMs: 15000 });
+    const html = await fetchWithTimeout(resolved, { referrer: origin + "/", timeoutMs: 15000, clientIp });
     const allLinks = new Set<string>();
 
     const mainLinks = extractStreamLinks(html, resolved);
@@ -425,6 +501,7 @@ export async function getStreamLinks(eventUrl: string): Promise<{ url: string; l
                 const iframeHtml = await fetchWithTimeout(iframeUrl, {
                     referrer: resolved,
                     timeoutMs: 12000,
+                    clientIp,
                 });
                 const embedLinks = extractStreamLinks(iframeHtml, iframeUrl);
                 embedLinks.forEach((u) => allLinks.add(u));
@@ -437,6 +514,7 @@ export async function getStreamLinks(eventUrl: string): Promise<{ url: string; l
                             const nestedHtml = await fetchWithTimeout(nestedUrl, {
                                 referrer: iframeUrl,
                                 timeoutMs: 10000,
+                                clientIp,
                             });
                             const nestedLinks = extractStreamLinks(nestedHtml, nestedUrl);
                             nestedLinks.forEach((u) => allLinks.add(u));
@@ -468,4 +546,21 @@ export async function getStreamLinks(eventUrl: string): Promise<{ url: string; l
 export function getBaseUrl(): string {
     const mirrors = getBaseUrls();
     return (mirrors[0] || DEFAULT_ORIGIN).replace(/\/$/, "");
+}
+
+/** Returns the mirror URL the client should fetch from the user's device (user's IP). Used for client-side fetch flow. */
+export function getMirrorUrlForClient(): string {
+    const toTry = getMirrorsToTry();
+    return toTry[0] ?? getBaseUrl();
+}
+
+/** Parse event links from Streameast homepage HTML. Exported for POST /streameast/events/parse (client sends HTML). */
+export function parseEventsFromHtmlPublic(html: string, baseUrl: string): LiveEvent[] {
+    return parseEventsFromHtml(html, baseUrl.replace(/\/$/, ""));
+}
+
+/** Extract stream links from a single page HTML. Client fetches event page from device, sends HTML. */
+export function parseStreamLinksFromHtml(html: string, pageUrl: string): { url: string; links: string[] } {
+    const links = extractStreamLinks(html, pageUrl);
+    return { url: pageUrl, links };
 }

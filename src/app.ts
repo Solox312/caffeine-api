@@ -49,7 +49,7 @@ async function startServer() {
     });
 
     await fastify.register(daddylive, { prefix: "/daddylive" });
-    await fastify.register(streameastRoutes, { prefix: "/streameast" });
+    await fastify.register(streameastRoutes, { prefix: "/streameast", redis: redis || undefined });
     await fastify.register(configRoute);
     await fastify.register(scraperRoutes);
     const pkg = JSON.parse(
