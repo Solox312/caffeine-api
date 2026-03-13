@@ -10,3 +10,9 @@ export const daddyliveStreamBaseUrl =
     "https://webhdrunns.mizhls.ru/lb/premium";
 export const daddyliveTrailingUrl = `/index.m3u8?|referer=${daddyliveReferrer}`;
 export const daddylive247Url = "https://dlhd.so/24-7-channels.php";
+/** Domains for embed/watch pages - used when extracting HLS. Try in order if one fails. */
+export const daddyliveDomains = [
+    "https://daddylive.cv",
+    "https://daddylive.top",
+    "https://daddylives.nl",
+] as const;

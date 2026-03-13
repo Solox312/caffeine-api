@@ -15,7 +15,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.redis = exports.tmdbKey = exports.workers_url = void 0;
 const fastify_1 = __importDefault(require("fastify"));
 const daddylive_1 = __importDefault(require("./routes/daddylive"));
-const streameast_1 = __importDefault(require("./routes/streameast"));
 const config_1 = __importDefault(require("./routes/config"));
 const scraper_1 = __importDefault(require("./routes/scraper"));
 const status_1 = __importDefault(require("./routes/status"));
@@ -53,7 +52,6 @@ function startServer() {
             methods: "GET",
         });
         yield fastify.register(daddylive_1.default, { prefix: "/daddylive" });
-        yield fastify.register(streameast_1.default, { prefix: "/streameast" });
         yield fastify.register(config_1.default);
         yield fastify.register(scraper_1.default);
         const pkg = JSON.parse((0, fs_1.readFileSync)((0, path_1.join)(__dirname, "..", "package.json"), "utf-8"));

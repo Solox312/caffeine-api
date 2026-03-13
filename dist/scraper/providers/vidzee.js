@@ -18,10 +18,19 @@ const DEFAULT_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
     Referer: VIDZEE_REFERER,
 };
+function resolveFetchUrl(url) {
+    var _a;
+    const workersUrl = (_a = process.env.WORKERS_URL) === null || _a === void 0 ? void 0 : _a.trim();
+    if (!workersUrl)
+        return url;
+    const sep = workersUrl.includes("?") ? "&" : "?";
+    return `${workersUrl}${sep}url=${encodeURIComponent(url)}`;
+}
 function makeRequest(url, options = {}) {
     return __awaiter(this, void 0, void 0, function* () {
         const headers = Object.assign(Object.assign({}, DEFAULT_HEADERS), options.headers);
-        const response = yield fetch(url, Object.assign({ method: options.method || "GET", headers, signal: AbortSignal.timeout(7000) }, options));
+        const fetchUrl = resolveFetchUrl(url);
+        const response = yield fetch(fetchUrl, Object.assign({ method: options.method || "GET", headers, signal: AbortSignal.timeout(7000) }, options));
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
