@@ -73,7 +73,6 @@ export default async function tvPairRoute(
         do {
             code = randomCode();
         } while (memoryStore.has(code));
-        const now = Date.now();
         memoryStore.set(code, {
             createdAt: now,
             expiresAt: now + CODE_TTL_MS,
