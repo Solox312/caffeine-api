@@ -3,6 +3,7 @@ import daddylive from "./routes/daddylive";
 import configRoute from "./routes/config";
 import scraperRoutes from "./routes/scraper";
 import statusRoute from "./routes/status";
+import tvPairRoute from "./routes/tv_pair";
 import chalk from "chalk";
 import { readFileSync } from "fs";
 import { join } from "path";
@@ -44,11 +45,12 @@ async function startServer() {
     });
     await fastify.register(FastifyCors, {
         origin: "*",
-        methods: "GET",
+        methods: ["GET", "POST"],
     });
 
     await fastify.register(daddylive, { prefix: "/daddylive" });
     await fastify.register(configRoute);
+    await fastify.register(tvPairRoute);
     await fastify.register(scraperRoutes);
     const pkg = JSON.parse(
         readFileSync(join(__dirname, "..", "package.json"), "utf-8")
