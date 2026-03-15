@@ -50,7 +50,7 @@ async function startServer() {
 
     await fastify.register(daddylive, { prefix: "/daddylive" });
     await fastify.register(configRoute);
-    await fastify.register(tvPairRoute);
+    await fastify.register(tvPairRoute, { redis: redis || undefined });
     await fastify.register(scraperRoutes);
     const pkg = JSON.parse(
         readFileSync(join(__dirname, "..", "package.json"), "utf-8")
